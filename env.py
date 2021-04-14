@@ -5,7 +5,7 @@ World and track width are fixed, should not be changed
 
 
 '''
-trackWidth = 5
+trackWidth = 50
 
 class Track:
     '''
@@ -13,8 +13,8 @@ class Track:
     '''
     openArea = True #Is outside area traversable
     #Relative dimensions of the world, which would be later scaled for the display
-    HEIGHT = 50 
-    WIDTH = 50
+    HEIGHT = 500 
+    WIDTH = 500
     wireFrame = True
 
     def __init__(self, track_elems) -> None:
@@ -83,6 +83,24 @@ class LineElement(TrackElement):
     def render(batch, color):
         pass
 
+class StartingStrip(LineElement):
+    def __init__(self, start, end) -> None:
+        super().__init__(None, end, start)
+        if Track.wireFrame:
+            self.wireFrame()
+    
+    def wireFrame(self):
+        third = [self.points[0][0:2], self.points[1][0:2]] #Back wall
+        self.points.append([third]) #bottom two points
+
+        
+        
+        
+
+class FinishLine(TrackElement):
+    def __init__(self, prev, end) -> None:
+        super().__init__(prev, end)
+
 
 class TurnElement(TrackElement):
     '''
@@ -144,34 +162,42 @@ class Point:
         to_return = np.sqrt(delt_x + delt_y)
         return to_return
 
-class StartingStrip(LineElement):
-    def __init__(self, start, end) -> None:
-        super().__init__(None, end, start)
-        if Track.wireFrame:
-            self.wireFrame()
-    
-    def wireFrame(self):
-        third = [self.points[0][0:2], self.points[1][0:2]] #Back wall
-        self.points.append([third]) #bottom two points
-
-        
-        
-        
-
-class FinishLine(TrackElement):
-    def __init__(self, prev, end) -> None:
-        super().__init__(prev, end)
-
-class Block:
-    '''
-    Square block of side 1
-    reference from lower left point
-    '''
-
-    def __init__(self) -> None:
-        pass
-
 
 class TrackEngine:
-    def __init__(self) -> None:
+    def __init__(self, width, height) -> None:
+        self.height = height
+        self.width = width
+
+        self.worldGrid = self.writeGrid(width, height)
+
+    def writeGrid(width, height):
+        world_grid = [[[] for y in range(height)] for x in range(width)]
+        return world_grid
+
+    def fillGrid(self, anchor, track):
+        '''
+        Adds a track to a corresponding Block, will be called when 
+        '''
+        self.findBlock(anchor).append(track)
+
+
+    def findBlock(self, anchor):
+        '''
+        Returns the Block TrackElement list
+        '''
+        assert anchor[0] < self.width, 'Invalid coordinates'
+        assert anchor[1] < self.height, 'Invalid coordinates'
+        x = int(anchor[0])
+        y = int(anchor[1])
+
+        return self.worldGrid[x][y]
+    
+    def findWall(self, start_anchor, angle):
+        '''
+        Searching the closest LineElement (point on the wall) from a point and angle
+        returns the point in that line and the corresponding Track Element
+        '''
+        pass
+
+    def shapeCollide(self, start, angle, shape):
         pass
