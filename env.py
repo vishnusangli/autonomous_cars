@@ -1,9 +1,9 @@
 import numpy as np
 
+import calcmath
+
 '''
 World and track width are fixed, should not be changed
-
-
 '''
 trackWidth = 50
 
@@ -13,15 +13,16 @@ class Track:
     '''
     openArea = True #Is outside area traversable
     #Relative dimensions of the world, which would be later scaled for the display
-    HEIGHT = 500 
-    WIDTH = 500
+    
     wireFrame = True
 
-    def __init__(self, track_elems) -> None:
+    def __init__(self, track_elems, height, width) -> None:
         '''
         Track would've already been creaetd and verified, this is only placeholder
         '''
         self.track_elements = track_elems
+        self.HEIGHT = height
+        self.WIDTH = width
         #Run the Track Engine and create according data structure
     
     def render(batch):
@@ -37,14 +38,14 @@ class TrackElement:
     '''
     nextElem = None
 
-    def __init__(self, prev, end, start = None) -> None:
-        if start == None:
+    def __init__(self, prev, end, startPoint = None) -> None:
+        #Different treatment for the StartingStrip
+        if startPoint == None:
             self.startPoint = prev.endPoint #Does not work with the very first lineElem
         elif prev == None:
-            self.startPoint = start
+            self.startPoint = startPoint #start is a Point, for the StartingStrip
         else:
             raise Exception #Should be one or the other
-
         self.endPoint = end
         self.prevElem = prev
     
@@ -67,11 +68,18 @@ class LineElement(TrackElement):
         angle = self.startPoint.angle(self.endPoint)
         if self.startPoint.dirVec == None: #Treats cases of StartingStrip
             self.startPoint.dirVec = angle
-        assert angle == self.startPoint.dirVec, 'Directions from a line eleme should essentially be the same'
+        #assert angle == self.startPoint.dirVec, 'Directions from a line eleme should essentially be the same'
         self.endPoint.dirVec = angle
     
     def wireFrame(self):
-        perp_angle = self.startPoint.dirVec
+        '''
+        Returns a list of two lists - each (startX, startX, endX, endY)
+        For each side of the track
+        Start points for both lists will correlate with start Point of chosen startPoint
+        (For simplicity when defining and drawing the StartingStrip and FinishLine)
+        '''
+        perp_angle = self.startPoint.dirVec - np.pi/2
+
         x_off = np.cos(perp_angle) * trackWidth
         y_off = np.sin(perp_angle) * trackWidth
         right = [self.startPoint.xPos + x_off, self.startPoint.yPos + y_off, self.endPoint.xPos + x_off, self.endPoint.yPos + y_off]
@@ -100,6 +108,16 @@ class StartingStrip(LineElement):
 class FinishLine(TrackElement):
     def __init__(self, prev, end) -> None:
         super().__init__(prev, end)
+        if Track.wireFrame:
+            self.wireFrame()
+    
+    def wireFrame(self):
+        '''
+        Uses the final two points of previous element
+        Ne
+        '''
+        third = [self.points[0][0:2], self.points[1][0:2]] #Back wall
+        self.points.append([third]) #bottom two points
 
 
 class TurnElement(TrackElement):
@@ -111,12 +129,8 @@ class TurnElement(TrackElement):
         #Where are point directions settled?
         self.set_endDir()
         self.points = self.wireFrame()
-
-
-    def prepDraw():
-        '''
-        fill
-        '''
+        if Track.wireFrame:
+            self.wireFrame()
     
     def wireFrame(self):
         '''
@@ -127,40 +141,11 @@ class TurnElement(TrackElement):
         #90 - (vector angle - perp direction) gives the arc angle
         # difference vector magnitude / cos(vector angle - perp direction) gives radius
         #go in perp direction to find anchor
+
         
     
     def render(self, batch):
         pass
-
-
-class Point:
-    '''
-    API used for reference points in track elements
-    '''
-    def __init__(self, xPos, yPos, dir = None) -> None:
-        self.xPos = xPos
-        self.yPos = yPos
-
-        self.dirVec = dir #Directional vector of movement & following track creation
-        pass
-
-    def angle(self, other):
-        '''
-        Common format to return in Radians
-        '''
-        delt_y = other.yPos - self.yPos
-        delt_x = other.xPos - self.xPos
-        to_return = np.arctan(np.divide(delt_y, delt_x)) 
-        return to_return
-    
-    def distance(self, other):
-        '''
-        Returns distance to another point
-        '''
-        delt_y = np.power(other.yPos - self.yPos, 2)
-        delt_x = np.power(other.xPos - self.xPos, 2)
-        to_return = np.sqrt(delt_x + delt_y)
-        return to_return
 
 
 class TrackEngine:

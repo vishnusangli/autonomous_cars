@@ -1,20 +1,20 @@
-secnum = 20
-class abcd:
+import pyglet
 
-    def __init__(self) -> None:
-        self.change()
+window = pyglet.window.Window()
+fps_display = pyglet.clock.get_fps()
+label = pyglet.text.Label('Hello World!',font_name='Arial',font_size=36, x=0, y=0)
 
-class amking(abcd):
-    def __init__(self) -> None:
-        super().__init__()
-    
-    def change():
-        print('Hello')
+@window.event                       
+def on_mouse_motion(x, y, dx, dy):
+    window.clear()
+    label.x = x
+    label.y = y
 
-def make(hand) -> int:
-    return hand + 1
 
-print("Start")
-print(make(4))
 
-f = amking()
+@window.event
+def on_draw():
+
+    label.draw()
+
+pyglet.app.run()

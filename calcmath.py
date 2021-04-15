@@ -1,5 +1,138 @@
 import numpy as np
 
+rad_deg = lambda x: x * (180./np.pi)
+deg_rad = lambda x: x * (np.pi/180.)
+
+class Point:
+    '''
+    API used for reference points in track elements
+    Standard --- Angle Radian System
+    '''
+    def __init__(self, xPos, yPos, dir = None) -> None:
+        self.xPos = xPos
+        self.yPos = yPos
+
+        self.dirVec = dir #Directional vector of movement & following track creation
+
+
+    def angle(self, other):
+        '''
+        Common format to return in Radians
+        '''
+        d = np.inf
+        if other.xPos - self.xPos != 0:
+            d = np.divide(other.yPos - self.yPos, other.xPos - self.xPos)
+        angle = np.arctan(d) 
+    
+        if (angle < 0 and self.yPos < other.yPos):
+            angle += np.pi
+        
+        elif angle > 0 and self.yPos > other.yPos:
+            angle = np.pi - angle
+        
+        elif angle == 0 and self.xPos > other.xPos:
+            angle = np.pi
+        elif angle == np.inf and self.yPos > other.yPos:
+            angle = -np.inf
+    
+        return angle
+
+    
+    def distance(self, other):
+        '''
+        Returns distance to another point
+        '''
+        delt_y = np.power(other.yPos - self.yPos, 2)
+        delt_x = np.power(other.xPos - self.xPos, 2)
+        to_return = np.sqrt(delt_x + delt_y)
+        return to_return
+    
+    def __str__(self):
+        return 'Point[{0:4.4f}, {1:4.4f}]|'.format(self.xPos, self.yPos) + str(self.dirVec)
+    
+    def __repr__(self):
+        return 'Point[{0:4.4f}, {1:4.4f}]|'.format(self.xPos, self.yPos) + str(self.dirVec)
+
+def rad_reduce(x):
+    if x < 0:
+        x = (2 * np.pi) + x
+        
+    while x > 2 * np.pi:
+        x -= 2 * np.pi
+    
+    if x > np.pi:
+        x -= 2 * np.pi
+    
+    return x
+
+def frame_angle(lims, theta):
+    theta = rad_reduce(theta)
+    
+    '''
+    If a valid angle is give, only 1 while loop would be used
+    If invalid angle is given, first loop runs until overshot, after which second doesn't, returning 
+    an angle that is beyond range
+    '''
+    while theta < lims[0]:
+        theta += (2 * np.pi)
+        
+    while theta > lims[1]:
+        theta -= (2 * np.pi)
+    
+    if lims[0] <= theta <= lims[1]:
+        return theta
+    else:
+        print(lims, theta)
+        return None
+
+
+def get_angle(start, end):
+    d = np.divide(end[1] - start[1], end[0] - start[0])
+    angle = np.arctan(d) 
+    
+    if (angle < 0 and start[1] < end[1]):
+        angle += np.pi
+        
+    elif angle > 0 and start[1] > end[1]:
+        angle = np.pi - angle
+    
+    return angle
+
+def get_distance(start, end):
+    distance = np.sqrt(np.power(start[1] - end[1], 2) + np.power(start[0] - end[0], 2))
+    return distance
+    
+    
+def turnCalc(start, end):
+    '''
+    return anchor, angle, and rotation angle
+    Next stage -- radius changing with track width
+    '''
+    halfpi = np.pi/2
+    deriv = rad_reduce(start.dirVec)
+    
+    
+    angle = start.angle(end)
+
+    angle = frame_angle([deriv - halfpi, deriv + halfpi], angle) 
+
+    if angle == None:
+        return
+    #Now both angles are in radians
+    standard = deriv - halfpi
+    if deriv < angle:
+        standard = deriv + halfpi
+    distance = start.distance(end)
+    theta = angle - standard
+    radius = np.divide(distance, 2 * np.cos(theta))
+    phi = np.pi - (2 * abs(rad_reduce(theta)))
+    
+    anchor = Point(start.xPos + (radius * np.cos(standard)), start.xPos + (radius * np.sin(standard)))
+    rotate = min([anchor.angle(start), anchor.angle(end)])
+    rotate = -rad_deg(rotate)
+    return anchor, radius, phi, rotate
+
+
 def funcsolve(f, g, lims, e = 1e-4, step = 0.2, min_step = 0.001):
     diff = lambda x: np.power(f(x) - g(x), 2)
     deriv = lambda f, x: np.divide(f(x) - f(x - step), step) #Backward differentiation
