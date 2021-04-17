@@ -1,0 +1,6 @@
+Vishnu's Objective notes
+4/17/21
+circ_func returns a point instead of xPos, yPos
+TurnElem’s wallFunc need semicircle breakup
+Render functions need some clarification
+turn_calc faulty in quadrant 3

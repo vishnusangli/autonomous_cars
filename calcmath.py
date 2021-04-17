@@ -8,7 +8,7 @@ class Point:
     API used for reference points in track elements
     Standard --- Angle Radian System
     '''
-    def __init__(self, xPos, yPos, dir = None) -> None:
+    def __init__(self, xPos, yPos, dir = None) -> None: 
         self.xPos = xPos
         self.yPos = yPos
 
@@ -27,13 +27,15 @@ class Point:
         if (angle < 0 and self.yPos < other.yPos):
             angle += np.pi
         
+        elif d == np.inf and self.yPos > other.yPos:
+            angle = -np.pi/2
+
         elif angle > 0 and self.yPos > other.yPos:
             angle = np.pi - angle
         
         elif angle == 0 and self.xPos > other.xPos:
             angle = np.pi
-        elif angle == np.inf and self.yPos > other.yPos:
-            angle = -np.inf
+        
     
         return angle
 
@@ -46,6 +48,23 @@ class Point:
         delt_x = np.power(other.xPos - self.xPos, 2)
         to_return = np.sqrt(delt_x + delt_y)
         return to_return
+    
+    def gradient(self, other):
+        '''
+        Returns gradient
+        '''
+        val = np.divide(self.yPos - other.yPos, self.xPos - other.xPos)
+        return val
+    
+    def loc_gradient(x1, y1, x2, y2):
+        '''
+        Returns gradient
+        '''
+        val = np.divide(y1 - y2, x1 - x2)
+        return val
+
+    def givePos(self):
+        return [self.xPos, self.yPos]
     
     def __str__(self):
         return 'Point[{0:4.4f}, {1:4.4f}]|'.format(self.xPos, self.yPos) + str(self.dirVec)
@@ -181,3 +200,52 @@ def funcsolve(f, g, lims, e = 1e-4, step = 0.2, min_step = 0.001):
         x += step
     return 0, False
 
+
+def line_func(x1, y1, x2, y2):
+    grad = Point.loc_gradient(x1, y1, x2, y2)
+
+    def return_func(x):
+        if x < x1 or x > x2:
+            return np.NaN
+        delt_y = x - x1
+        delt_y = delt_y * grad
+        return delt_y + y1
+    return return_func
+
+def circ_func(anchor, radius, startPhi, endPhi, upper = True):
+    '''
+    upper provides the distinction between upper semicircle and lower semicircle
+    Cannot make a master_func easily since it affects usage with repeating x vals
+    Need to look big picture to implement this
+    '''
+    startPhi = rad_reduce(startPhi)
+    endPhi = rad_reduce(endPhi)
+    if upper:
+        assert startPhi >= 0 and endPhi >= 0, "Circle angles need to be of same semicircle type"
+    else:
+        assert startPhi >= 0 and endPhi >= 0, "Circle angles need to be of same semicircle type"
+    def return_func(x):
+        val = radius**2 - np.power(x - anchor.xPos, 2)
+        if val < 0:
+            return np.NaN
+        
+        val = np.sqrt(val)
+        if not upper:
+            val = - val
+
+        y = val + anchor.yPos
+        angle = anchor.angle(Point(x, y))
+        if startPhi <= angle <= endPhi:
+            return y
+        else:
+            return np.NaN
+
+    return return_func
+
+
+def angledpoint_end(start, angle, length):
+    '''
+    Given a point and angle, gives the corresponding endPoint
+    '''
+    end = Point(start.xPos + (length * np.cos(angle)), start.yPos + (length * np.sin(angle)), angle)
+    return end

@@ -1,6 +1,7 @@
 import numpy as np
 
-import calcmath
+from calcmath import *
+from pyglet import shapes
 
 '''
 World and track width are fixed, should not be changed
@@ -48,7 +49,10 @@ class TrackElement:
             raise Exception #Should be one or the other
         self.endPoint = end
         self.prevElem = prev
-    
+
+        self.color = (255, 255, 255)
+        self.friction = 1.0    
+        self.render_objs = []
 
 class LineElement(TrackElement):
     '''
@@ -57,8 +61,10 @@ class LineElement(TrackElement):
     def __init__(self, prev, end) -> None:
         super().__init__(prev, end)
         self.set_endDir()
-        if Track.wireFrame:
-            self.points = self.wireFrame()
+
+        self.points = self.wireFrame()
+        self.funcs = self.wallFunc()
+
         
     def set_endDir(self):
         '''
@@ -73,34 +79,58 @@ class LineElement(TrackElement):
     
     def wireFrame(self):
         '''
-        Returns a list of two lists - each (startX, startX, endX, endY)
+        Returns a list of two lists - each [x1, y1, x2, y2]
         For each side of the track
         Start points for both lists will correlate with start Point of chosen startPoint
         (For simplicity when defining and drawing the StartingStrip and FinishLine)
         '''
         perp_angle = self.startPoint.dirVec - np.pi/2
+        
+        diffx = trackWidth * np.cos(perp_angle)
+        diffy = trackWidth * np.sin(perp_angle)
+        lower = [[self.startPoint.xPos + diffx, self.startPoint.yPos + diffy]]
+        lower.append([self.endPoint.xPos + diffx, self.endPoint.yPos + diffy])
 
-        x_off = np.cos(perp_angle) * trackWidth
-        y_off = np.sin(perp_angle) * trackWidth
-        right = [self.startPoint.xPos + x_off, self.startPoint.yPos + y_off, self.endPoint.xPos + x_off, self.endPoint.yPos + y_off]
-        left = [self.startPoint.xPos - x_off, self.startPoint.yPos - y_off, self.endPoint.xPos - x_off, self.endPoint.yPos - y_off]
-        to_return = [[left], [right]]
+        upper = [[self.startPoint.xPos - diffx, self.startPoint.yPos - diffy]]
+        upper.append([self.endPoint.xPos - diffx, self.endPoint.yPos - diffy])
+
+        to_return = [lower, upper]
+        return to_return
+    
+    def wallFunc(self):
+        '''
+        Returns a list of ranged functions that characterize the element
+        '''
+        to_return = [line_func(*a) for a in self.points]
         return to_return
 
-
-    def render(batch, color):
-        pass
+    def render(self, batch):
+        '''
+        Need to explore pyglet before writing this function
+        Do I need to re-create the render_objs list and objects
+        or is just one render enough
+        TRACK WILL NOT MOVE!!! NO PERSPECTIVE SHIT DEDICATE MORE TIME TO DL AND ML
+        '''
+        self.render_objs
 
 class StartingStrip(LineElement):
     def __init__(self, start, end) -> None:
         super().__init__(None, end, start)
-        if Track.wireFrame:
-            self.wireFrame()
+        self.wireFrame()
+        self.funcs.append(self.wallFunc())
     
     def wireFrame(self):
+        '''
+        Adds the end wall to the points list
+        '''
         third = [self.points[0][0:2], self.points[1][0:2]] #Back wall
         self.points.append([third]) #bottom two points
 
+    def wallFunc(self):
+        '''
+        Adds the end wall to the funcs list
+        '''
+        return line_func(*self.points[2])
         
         
         
@@ -108,17 +138,19 @@ class StartingStrip(LineElement):
 class FinishLine(TrackElement):
     def __init__(self, prev, end) -> None:
         super().__init__(prev, end)
-        if Track.wireFrame:
-            self.wireFrame()
+        self.points = self.wireFrame()
+        self.funcs = self.wallFunc()
     
     def wireFrame(self):
         '''
         Uses the final two points of previous element
         Ne
         '''
-        third = [self.points[0][0:2], self.points[1][0:2]] #Back wall
-        self.points.append([third]) #bottom two points
+        third = [self.prev.points[0][2:], self.prev.points[1][2:]] #Back wall
+        return third
 
+    def wallFunc(self):
+        return line_func(*self.points)
 
 class TurnElement(TrackElement):
     '''
@@ -127,10 +159,15 @@ class TurnElement(TrackElement):
     def __init__(self, prev, end) -> None:
         super().__init__(prev, end)
         #Where are point directions settled?
-        self.set_endDir()
+
         self.points = self.wireFrame()
-        if Track.wireFrame:
-            self.wireFrame()
+        self.set_endDir()
+        
+        self.wireFrame()
+        self.funcs = self.wallFunc()
+
+    def set_endDir():
+        pass
     
     def wireFrame(self):
         '''
@@ -141,11 +178,20 @@ class TurnElement(TrackElement):
         #90 - (vector angle - perp direction) gives the arc angle
         # difference vector magnitude / cos(vector angle - perp direction) gives radius
         #go in perp direction to find anchor
-
+        side = np.divide(trackWidth, 2)
+        anchor, radius, phi, rotate = turnCalc(self.startPoint, self.endPoint)
+        to_return = [[anchor.xPos, anchor.yPos, radius + side, phi, rotate]]
+        to_return.append([anchor.xPos, anchor.yPos, radius - side, phi, rotate])
         
     
     def render(self, batch):
         pass
+
+    def wallFunc():
+        '''
+        Need to consider the upper-lower semicircle breakup
+        '''
+        
 
 
 class TrackEngine:
