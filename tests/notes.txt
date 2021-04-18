@@ -1,6 +1,19 @@
 Vishnu's Objective notes
 4/17/21
-circ_func returns a point instead of xPos, yPos
-TurnElem’s wallFunc need semicircle breakup
-Render functions need some clarification
-turn_calc faulty in quadrant 3
+- circ_func returns a point instead of xPos, yPos (Incorporated, not changed)
+- TurnElem’s wallFunc need semicircle breakup (Not Tested)
+- Render functions need some clarification 
+- turn_calc faulty in quadrant 3 (Done)
+- write setendDir() for TurnElement (Not Tested)
+- Confirm the proper treatment of 0 angle in circ functions (I think so)
+- Finish and add gridEngine (Not Tested)
+- Add the obstruct funcs in Track class (Not Tested)
+- funcsolve needs a range as arg while our ranged funcs already have it incorporated 
+- funcsolve's prevx variable does not work as needed, it gives last x where both f(x) g(x) exist, 
+line of sight funcitonality needs last f(x) (priority given to f(x)). Otherwise, can just use as 
+is and utilize angledpoint_end since line of sight is the only requirement for prevx (Solved by added lims as a attr of track elems)
+
+4/18/21
+- Create the worldLoading and checking loop
+- Create the worldCreator
+- Create buffered track file writers and readers

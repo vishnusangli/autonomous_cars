@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.optimize.optimize import _endprint
 
 from calcmath import *
 from pyglet import shapes
@@ -17,20 +18,50 @@ class Track:
     
     wireFrame = True
 
-    def __init__(self, track_elems, height, width) -> None:
+    def __init__(self, track_elems, height, width, engine) -> None:
         '''
         Track would've already been creaetd and verified, this is only placeholder
         '''
         self.track_elements = track_elems
         self.HEIGHT = height
         self.WIDTH = width
+        self.engine = engine
         #Run the Track Engine and create according data structure
     
     def render(batch):
         pass
 
-    def checkCollision(thing): #Here thing is of datatype thing
-        pass
+    def checkCollision(self, points): #Here thing is of datatype thing
+        '''
+        Input args: 4 lists of each pair of corners for the car object: 
+        Thereby applying linefuncs and doing the individual grid_search check for each line
+        Returns whether collided or not, point of contact is irrelevant
+        '''
+        for pair in points:
+            f = line_func(*pair)
+            success, pot, _ = self.engine.grid_search(f, [pair[0], pair[2]])
+            if success:
+                return True
+
+        return False
+
+    def lineof_sight(self, centre, angles, max_sight = 20):
+        '''
+        Takes in a list of angles with respect to obj and returns a dictionary of endPoints
+        Currently it returns the points themselves, should consider returning merely distance
+        However, the distance lines cannot be shown then
+        '''
+        sight_dict = {}
+        ref = centre.dirVec
+        for a in angles:
+            end = angledpoint_end(centre, (a - np.pi/2) + ref, max_sight)
+            f = line_func(centre.xPos, centre.yPos, end.xPos, end.yPos)
+            success, pot, _ = self.engine.grid_search(f, [centre.xPos, end.xPos])
+            if success:
+                sight_dict[a] = Point(pot, f(pot))
+            else:
+                sight_dict[a] = end
+        return sight_dict
 
 
 class TrackElement:
@@ -53,6 +84,7 @@ class TrackElement:
         self.color = (255, 255, 255)
         self.friction = 1.0    
         self.render_objs = []
+        self.lims = None
 
 class LineElement(TrackElement):
     '''
@@ -93,6 +125,7 @@ class LineElement(TrackElement):
 
         upper = [[self.startPoint.xPos - diffx, self.startPoint.yPos - diffy]]
         upper.append([self.endPoint.xPos - diffx, self.endPoint.yPos - diffy])
+        self.lims = [self.startPoint.xPos - abs(diffx), self.endPoint.xPos + abs(diffx)]
 
         to_return = [lower, upper]
         return to_return
@@ -147,6 +180,7 @@ class FinishLine(TrackElement):
         Ne
         '''
         third = [self.prev.points[0][2:], self.prev.points[1][2:]] #Back wall
+        self.lims = self.prev.lims #wasteful, but so what
         return third
 
     def wallFunc(self):
@@ -161,13 +195,22 @@ class TurnElement(TrackElement):
         #Where are point directions settled?
 
         self.points = self.wireFrame()
-        self.set_endDir()
         
-        self.wireFrame()
-        self.funcs = self.wallFunc()
 
-    def set_endDir():
-        pass
+        self.anchor = None
+        self.wireFrame()
+        self.set_endDir()
+        self.funcs = self.wallFunc()
+        
+
+    def set_endDir(self):
+        startPhi = self.anchor.angle(self.startPoint)
+        endPhi = self.anchor.angle(self.endPoint)
+
+        if is_clockwise(startPhi, endPhi):
+            self.endPoint.angle = rad_reduce(endPhi - np.pi/2)
+        else:
+            self.endPoint.angle = rad_reduce(endPhi + np.pi/2)
     
     def wireFrame(self):
         '''
@@ -179,56 +222,181 @@ class TurnElement(TrackElement):
         # difference vector magnitude / cos(vector angle - perp direction) gives radius
         #go in perp direction to find anchor
         side = np.divide(trackWidth, 2)
-        anchor, radius, phi, rotate = turnCalc(self.startPoint, self.endPoint)
-        to_return = [[anchor.xPos, anchor.yPos, radius + side, phi, rotate]]
-        to_return.append([anchor.xPos, anchor.yPos, radius - side, phi, rotate])
+        self.anchor, radius, phi, rotate = turnCalc(self.startPoint, self.endPoint)
+        to_return = [[self.anchor.xPos, self.anchor.yPos, radius + side, phi, rotate]]
+        to_return.append([self.anchor.xPos, self.anchor.yPos, radius - side, phi, rotate])
+        self.lims = [self.anchor.xPos - abs(radius), self.anchor.xPos + abs(radius)]
+        return to_return
         
     
     def render(self, batch):
         pass
 
-    def wallFunc():
+    def wallFunc(self):
         '''
         Need to consider the upper-lower semicircle breakup
         '''
-        
+        angles = [self.anchor.angle(self.startPoint), self.anchor.angle(self.endPoint)]
+        min_a = min(angles)
+        max_a = max(angles)
+        to_return = []
+        if min < 0 and max > 0:
+            for elem in self.points:
+                to_return.append(circ_func(self.anchor, elem[2], min_a, 0, False))
+                to_return.append(circ_func(self.anchor, elem[2], 0, max_a, True))
+        else:
+            for elem in self.points:
+                to_return.append(circ_func(self.anchor, elem[2], min_a, max_a, min_a > 0))
+        return to_return
 
 
-class TrackEngine:
-    def __init__(self, width, height) -> None:
+class gridEngine:
+    def __init__(self, height, width):
         self.height = height
         self.width = width
-
-        self.worldGrid = self.writeGrid(width, height)
-
-    def writeGrid(width, height):
-        world_grid = [[[] for y in range(height)] for x in range(width)]
-        return world_grid
-
-    def fillGrid(self, anchor, track):
-        '''
-        Adds a track to a corresponding Block, will be called when 
-        '''
-        self.findBlock(anchor).append(track)
-
-
-    def findBlock(self, anchor):
-        '''
-        Returns the Block TrackElement list
-        '''
-        assert anchor[0] < self.width, 'Invalid coordinates'
-        assert anchor[1] < self.height, 'Invalid coordinates'
-        x = int(anchor[0])
-        y = int(anchor[1])
-
-        return self.worldGrid[x][y]
+        self.grid = self.make_grid()
+        
+    def make_grid(self):
+        main = []
+        for x in range(self.width):
+            row = []
+            for y in range(self.height):
+                row.append([])
+            main.append(row)
     
-    def findWall(self, start_anchor, angle):
-        '''
-        Searching the closest LineElement (point on the wall) from a point and angle
-        returns the point in that line and the corresponding Track Element
-        '''
-        pass
+    def access(self, x, y):
+        assert x < self.width, "Invalid grid width"
+        assert y < self.height, "invalid grid height"
+        
+        to_return = self.grid[x][y]
+        return to_return
+    
+    def add_to(self, x, y, elem):
+        loc = self.access(x, y)
+        if not elem in loc:
+            loc.append(elem)
 
-    def shapeCollide(self, start, angle, shape):
-        pass
+    def grid_search(self, mainfunc, lims):
+        '''
+        The grid search, but altered to incorporate a list-based mainfunc
+        '''
+        y = mainfunc(lims[0])
+        x = int(lims[0])
+
+        prev = [x, int(y)]
+        grids = [prev]
+        potential = self.check_box(mainfunc, x, int(y))
+        if potential < np.inf:
+            True, potential, grids
+        
+        x += 1
+        run = True
+
+        while run:
+            if x > lims[1]:
+                x = lims[1]
+                run = False
+            y = mainfunc(x)
+            if y > -np.inf:
+                red_y = int(y)
+                pots = [self.check(mainfunc, x, red_y)]
+                grids.append([x, red_y])
+                loop_x = x - 1
+                if red_y > prev[1]: #If they're not adjacent
+                    for y_use in range(prev[1], red_y, 1):
+                        pots.append([self.check(mainfunc, loop_x, y_use)])
+                        grids.append([loop_x, red_y])
+                else:
+                    for y_use in range(prev[1], red_y, -1):
+                        pots.append([self.check(mainfunc, loop_x, y_use)])
+                        grids.append([loop_x, red_y])
+                
+
+                    grids.append([loop_x, red_y])
+                prev = [x, red_y]
+                if any([a < np.inf for a in pots]):
+                    return True, min(pots), grids
+
+            x += 1
+        return False, np.inf, grids
+
+            
+
+    def check_box(self, mainfunc, x, y):
+        elems = self.access(x, y)
+        obstructs = []
+        for e in elems:
+            success, val = self.find_obstruct(mainfunc, e.funcs, e.lims)
+            if success:
+                obstructs.append(val)
+        if obstructs:
+            return min(obstructs)
+        else:
+            return np.inf
+
+
+    def find_obstruct(self, mainfunc, funcs, lims):
+        '''
+        Takes in an elemFunc
+        
+        Returns -- boolean, endPoint
+        boolean - if obstruction was found
+        enPoint - the obstruction (if found), else None
+        endPoint will be the max line of sight if no obstruction is found
+
+        with ranged elemfuncs, range is implicit, needs some way of calculation
+        TrackElems could have min_x, max_x (line elems already have as elem.points, 
+        [anchor_x - rad, anchor_x + rad] for turn elems)
+        Questions: 
+        - will minx, maxx be reqd or can be ooptional args?
+        - should use trackelem as arg or funcs?
+
+        With minx, maxx as inputed args, trackelem needn't be an arg
+
+        list of mainfuncs, lims - input args
+        Search through grid-method
+        if overlapping grid found: do the mainfuncs-funcs obstruction check
+        Keep empty obstructions list outside, append those found.
+        At the end of the given grid box search, check if obstruction found and follow same exit procedure
+        '''
+        obstructions = []
+        for f in funcs:
+            x_val, success = funcsolve(mainfunc, f, lims)
+            if success:
+                obstructions.append(x_val)
+        if any(obstructions):
+            xval = min(obstructions)
+            yval = mainfunc(xval)
+            assert yval > -np.inf, "Invalid intersection result from funcsolve"
+            return True, xval
+        else:
+            #Potential error, does mainfunc(lims[1]) exist? Must ensure
+            #Max pos here is only needed in line of sight, can just implement anglepoint_end() in the function that calls this one
+            return False, np.in
+
+    
+    def register_track(self, elem):
+        '''
+        Takes the walls of the track elem and returns whether it's successful
+        True - can save, no obstructions
+        False - didn't save, obstructions
+        '''
+        grids_passed = []
+        for f in elem.funcs:
+            success, inters, grids = self.grid_search(f, elem.lims)
+            if success:
+                return False
+            grids_passed += grids
+        return grids_passed
+
+        
+'''
+Inspired to write an elemFunc class, that stores some function and it's limits
+
+
+Track: interpret each track elem, register in grid engine
+track funcs 
+-is_collide() - find_obstruct on all 4 sides of car
+-lineof_sight() - find_obstruct in each line, return dict with angle as key
+'''
+        

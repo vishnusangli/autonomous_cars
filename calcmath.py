@@ -25,13 +25,13 @@ class Point:
         angle = np.arctan(d) 
     
         if (angle < 0 and self.yPos < other.yPos):
-            angle += np.pi
+            angle += np.pi #Negative angles in quadrant 4 to quadrant 2
         
         elif d == np.inf and self.yPos > other.yPos:
-            angle = -np.pi/2
+            angle = -np.pi/2 #90 degrees to 270 degrees
 
         elif angle > 0 and self.yPos > other.yPos:
-            angle = np.pi - angle
+            angle = - np.pi + angle #Positive angles in quadrant 1 to quadrant 3
         
         elif angle == 0 and self.xPos > other.xPos:
             angle = np.pi
@@ -101,7 +101,7 @@ def frame_angle(lims, theta):
     if lims[0] <= theta <= lims[1]:
         return theta
     else:
-        print(lims, theta)
+        #print(lims, theta)
         return None
 
 
@@ -152,6 +152,7 @@ def turnCalc(start, end):
     return anchor, radius, phi, rotate
 
 
+exists = lambda x: x >= -np.inf
 def funcsolve(f, g, lims, e = 1e-4, step = 0.2, min_step = 0.001):
     diff = lambda x: np.power(f(x) - g(x), 2)
     deriv = lambda f, x: np.divide(f(x) - f(x - step), step) #Backward differentiation
@@ -180,25 +181,29 @@ def funcsolve(f, g, lims, e = 1e-4, step = 0.2, min_step = 0.001):
         return start ^ end
     
     x = lims[0]
-    prevDiff = diff(x)
+    prevDiff = diff(x) if exists(f(x)) and exists(g(x)) else np.inf
     
     prev = True #Will increase runtime for faulty ones, but setting initial True will ignore certain cases
+    prev_existx = x
     #Prioritizing correctness over efficiency
     while x <= lims[1]:
         '''
         Has converging switched from True to Negative
         '''
-        if diff(x) <= e: #Base condition
-            return x, True
-        
-        curr = is_converging(x)
-        if prev and not curr: #Was converging and is not now
-            pot_lim = [x - step, x]
-            if could_converge(pot_lim) and step >= min_step: #Could it have converged; include a lower limit on the step
-                return funcsolve(f, g, pot_lim, step = np.divide(step, 10))#Recursive call with smaller range and step
-        prev = curr
+        if exists(f(x)) and exists(g(x)):
+
+            if diff(x) <= e: #Base condition
+                return x, True
+            prev_existx = x
+            curr = is_converging(x)
+            if prev and not curr: #Was converging and is not now
+                pot_lim = [x - step, x]
+                if could_converge(pot_lim) and step >= min_step: #Could it have converged; include a lower limit on the step
+                    return funcsolve(f, g, pot_lim, step = np.divide(step, 10))#Recursive call with smaller range and step
+            prev = curr
         x += step
-    return 0, False
+    return prev_existx, False
+
 
 
 def line_func(x1, y1, x2, y2):
@@ -247,5 +252,16 @@ def angledpoint_end(start, angle, length):
     '''
     Given a point and angle, gives the corresponding endPoint
     '''
+    angle = rad_reduce(angle)
     end = Point(start.xPos + (length * np.cos(angle)), start.yPos + (length * np.sin(angle)), angle)
     return end
+
+def is_clockwise(startPhi, endPhi):
+    '''
+    Determines whether the arc's orientation was clockwise or anti-clockwise
+    Current usage - helping set_endDir() for turn element
+    '''
+    startPhi = rad_reduce(startPhi)
+    endPhi = rad_reduce(endPhi)
+
+    return endPhi > startPhi
