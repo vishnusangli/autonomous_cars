@@ -15,7 +15,8 @@ batch = pyglet.graphics.Batch()
 
 line = shapes.Line(100, 100, 100, 200, batch=batch)
 arc = shapes.Arc(100, 400, 34, segments=25, angle=np.pi, color=(255, 255, 0), batch=batch)
-
+rect = shapes.Rectangle(500, 500, height = 70, width = 30, color=(255, 255, 0), batch=batch)
+rect.rotation = - 45
 arc2 = shapes.Arc(100, 0, 100, segments=200, angle=np.pi/2, color=(255, 255, 0), batch=batch)
 arc2.rotation = -90
 line2 = shapes.Line(100, 100, 200, 100, batch=batch)

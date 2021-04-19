@@ -372,7 +372,7 @@ class gridEngine:
         else:
             #Potential error, does mainfunc(lims[1]) exist? Must ensure
             #Max pos here is only needed in line of sight, can just implement anglepoint_end() in the function that calls this one
-            return False, np.in
+            return False, np.inf
 
     
     def register_track(self, elem):

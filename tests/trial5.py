@@ -6,7 +6,7 @@ import math
 import numpy as np
 from pyglet.gl import *
 
-window = pyglet.window.Window(960, 540)
+window = pyglet.window.Window(1260, 720)
 keys = key.KeyStateHandler()
 window.push_handlers(keys)
 batch = pyglet.graphics.Batch()

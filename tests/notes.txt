@@ -3,17 +3,20 @@ Vishnu's Objective notes
 - circ_func returns a point instead of xPos, yPos (Incorporated, not changed)
 - TurnElem’s wallFunc need semicircle breakup (Not Tested)
 - Render functions need some clarification 
+(From what I understand, only one draw command has to be sent in order for shapes/anything to remain for entire duration. The 
+objects disappear from screen when they're made null. Therefore, rendering is not a part of the gameloop but only the in the beginning setup)
 - turn_calc faulty in quadrant 3 (Done)
 - write setendDir() for TurnElement (Not Tested)
 - Confirm the proper treatment of 0 angle in circ functions (I think so)
 - Finish and add gridEngine (Not Tested)
 - Add the obstruct funcs in Track class (Not Tested)
-- funcsolve needs a range as arg while our ranged funcs already have it incorporated 
+- funcsolve needs a range as arg while our ranged funcs already have it incorporated  (Solved by added lims as a attr of track elems)
 - funcsolve's prevx variable does not work as needed, it gives last x where both f(x) g(x) exist, 
 line of sight funcitonality needs last f(x) (priority given to f(x)). Otherwise, can just use as 
-is and utilize angledpoint_end since line of sight is the only requirement for prevx (Solved by added lims as a attr of track elems)
+is and utilize angledpoint_end since line of sight is the only requirement for prevx (the functions that call funcsolve handle it)
 
 4/18/21
 - Create the worldLoading and checking loop
 - Create the worldCreator
 - Create buffered track file writers and readers
+
