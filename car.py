@@ -12,6 +12,7 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         self.speed = init_speed
         self.dims = dims
         self.render_obj = []
+        self.try_render = None
         self.calc_render_args(batch)
         #self.prev_orientation = np.pi/2 #render orientation
 
@@ -30,11 +31,17 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         if self.speed != 0 : #Can only steer when moving
             delt_steer = np.multiply(self.steer, dt) * (controls[1] - controls[3]) #no turn if both are pressed
             self.angle = rad_reduce(self.angle + delt_steer)
-
+        #self.apply_friction(friction)
         self.move(dt)
 
-    def apply_friction(self):
-        pass
+    def apply_friction(self, friction):
+        val = max(abs(self.speed) - friction, 0)
+        if val > 0:
+            mult = (abs(self.speed) / self.speed)
+            val = val * mult
+        self.speed = val
+
+
     def move(self, dt):
         '''
         Simplistic moving command that disregards previous momentum (How would our shit change if we begin to include it?)
@@ -76,7 +83,17 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         lower = [cen_front.xPos + diffx, cen_front.yPos + diffy]
         lower += [cen_back.xPos + diffx, cen_back.yPos + diffy]
 
-        upper = [cen_front.xPos - diffx, cen_front.yPos - diffy]
+        upper = [cen_front.xPos - abs(diffx), cen_front.yPos - abs(diffy)]
+        ref = Point(*upper)
+        cen_point = Point(cen_x, cen_y)
+        op_angle = ref.angle(cen_point) - np.arctan(np.divide(np.divide(self.dims[0], 2), np.divide(self.dims[1], 2)))
+        self.try_render = shapes.Rectangle(*upper, height = self.dims[0], width = self.dims[1], color = (255, 255, 255), batch = batch)
+        self.try_render.rotation = - rad_deg(op_angle)  #At this point I don't even know what I'm doing just give me a goddamn break
+        #print(- rad_deg(rad_reduce(op_angle)))
+
+
+
+        
         upper += [cen_back.xPos - diffx, cen_back.yPos - diffy]
         #print(self.angle)
         first = []
@@ -85,6 +102,7 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         self.render_obj = first
 
 
+        
 
 
 class Car(Thing):

@@ -7,7 +7,7 @@ from pyglet import shapes
 '''
 World and track width are fixed, should not be changed
 '''
-trackWidth = 50
+trackWidth = 20
 
 class Track:
     '''
@@ -90,13 +90,12 @@ class LineElement(TrackElement):
     '''
     Represents one straight line in the track as an object
     '''
-    def __init__(self, prev, end) -> None:
-        super().__init__(prev, end)
+    def __init__(self, prev, end, start = None) -> None:
+        super().__init__(prev, end, start)
         self.set_endDir()
 
         self.points = self.wireFrame()
         self.funcs = self.wallFunc()
-
         
     def set_endDir(self):
         '''
@@ -120,11 +119,11 @@ class LineElement(TrackElement):
         
         diffx = trackWidth * np.cos(perp_angle)
         diffy = trackWidth * np.sin(perp_angle)
-        lower = [[self.startPoint.xPos + diffx, self.startPoint.yPos + diffy]]
-        lower.append([self.endPoint.xPos + diffx, self.endPoint.yPos + diffy])
+        lower = [self.startPoint.xPos + diffx, self.startPoint.yPos + diffy]
+        lower += [self.endPoint.xPos + diffx, self.endPoint.yPos + diffy]
 
-        upper = [[self.startPoint.xPos - diffx, self.startPoint.yPos - diffy]]
-        upper.append([self.endPoint.xPos - diffx, self.endPoint.yPos - diffy])
+        upper = [self.startPoint.xPos - diffx, self.startPoint.yPos - diffy]
+        upper += [self.endPoint.xPos - diffx, self.endPoint.yPos - diffy]
         self.lims = [self.startPoint.xPos - abs(diffx), self.endPoint.xPos + abs(diffx)]
 
         to_return = [lower, upper]
@@ -137,33 +136,39 @@ class LineElement(TrackElement):
         to_return = [line_func(*a) for a in self.points]
         return to_return
 
-    def render(self, batch):
+    def render(self, x_fac, y_fac, batch):
         '''
         Need to explore pyglet before writing this function
         Do I need to re-create the render_objs list and objects
         or is just one render enough
         TRACK WILL NOT MOVE!!! NO PERSPECTIVE SHIT DEDICATE MORE TIME TO DL AND ML
         '''
-        self.render_objs
+        x_fac = 1 #Screw this shit I'm out
+        y_fac = 1
+        self.render_objs = []
+        for pair in self.points:
+            first = [np.divide(pair[0], x_fac), np.divide(pair[1], y_fac)]
+            sec = [np.divide(pair[2], x_fac), np.divide(pair[3], y_fac)]
+            self.render_objs.append(shapes.Line(*first, *sec, color = self.color, batch = batch))
+        
 
 class StartingStrip(LineElement):
     def __init__(self, start, end) -> None:
         super().__init__(None, end, start)
-        self.wireFrame()
-        self.funcs.append(self.wallFunc())
+
     
     def wireFrame(self):
         '''
         Adds the end wall to the points list
         '''
-        third = [self.points[0][0:2], self.points[1][0:2]] #Back wall
-        self.points.append([third]) #bottom two points
+        prev_ones = super().wireFrame()
 
-    def wallFunc(self):
-        '''
-        Adds the end wall to the funcs list
-        '''
-        return line_func(*self.points[2])
+        third = prev_ones[0][0:2] #Back wall
+        third += prev_ones[1][0:2]
+        prev_ones.append(third) #bottom two points
+        return prev_ones
+
+    
         
         
         
@@ -193,11 +198,10 @@ class TurnElement(TrackElement):
     def __init__(self, prev, end) -> None:
         super().__init__(prev, end)
         #Where are point directions settled?
-
+        self.anchor = None
         self.points = self.wireFrame()
         
-
-        self.anchor = None
+        
         self.wireFrame()
         self.set_endDir()
         self.funcs = self.wallFunc()
@@ -229,8 +233,15 @@ class TurnElement(TrackElement):
         return to_return
         
     
-    def render(self, batch):
-        pass
+    def render(self, x_fac, y_fac, batch):
+
+        self.render_objs = []
+        for pair in self.points:
+            
+            val = shapes.Arc(pair[0], pair[1], pair[2], segments = 30, angle = pair[3], color = self.color, batch = batch)
+            val.rotation = pair[4]
+            self.render_objs.append(val)
+            
 
     def wallFunc(self):
         '''
@@ -240,7 +251,7 @@ class TurnElement(TrackElement):
         min_a = min(angles)
         max_a = max(angles)
         to_return = []
-        if min < 0 and max > 0:
+        if min_a < 0 and max_a > 0:
             for elem in self.points:
                 to_return.append(circ_func(self.anchor, elem[2], min_a, 0, False))
                 to_return.append(circ_func(self.anchor, elem[2], 0, max_a, True))
@@ -276,16 +287,25 @@ class gridEngine:
         if not elem in loc:
             loc.append(elem)
 
+
     def grid_search(self, mainfunc, lims):
         '''
         The grid search, but altered to incorporate a list-based mainfunc
         '''
         y = mainfunc(lims[0])
         x = int(lims[0])
-
+        while not y < np.inf:
+            x += 0.2
+            print(x)
+            if x > 30:
+                return
+            y = mainfunc(x)
+        if x == 30:
+            print("Hello")
+        x = int(x)
         prev = [x, int(y)]
         grids = [prev]
-        potential = self.check_box(mainfunc, x, int(y))
+        potential = self.check_box(mainfunc, int(x), int(y))
         if potential < np.inf:
             True, potential, grids
         
@@ -374,8 +394,11 @@ class gridEngine:
             #Max pos here is only needed in line of sight, can just implement anglepoint_end() in the function that calls this one
             return False, np.inf
 
-    
-    def register_track(self, elem):
+    def register_track(self, grids, elem):
+        for a in grids:
+            self.add_to(*a, elem)
+
+    def check_track(self, elem):
         '''
         Takes the walls of the track elem and returns whether it's successful
         True - can save, no obstructions

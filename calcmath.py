@@ -60,6 +60,8 @@ class Point:
         '''
         Returns gradient
         '''
+        if x1 == x2:
+            return (y2 - y1) * np.inf
         val = np.divide(y1 - y2, x1 - x2)
         return val
 
