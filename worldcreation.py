@@ -36,6 +36,7 @@ class main(pyglet.window.Window):
         self.engine = gridEngine(height, width)
         self.batch = pyglet.graphics.Batch()
         self.alive = 1
+        self.on_draw()
 
     def on_draw(self):
         self.clear()
@@ -62,6 +63,7 @@ class main(pyglet.window.Window):
             self.curr_elem = 'turn'
         elif symbol == key.RIGHT:
             self.curr_elem = 'line'
+        self.on_draw()
 
     def on_mouse_motion(self, x, y, dx, dy):
         if self.first:
@@ -73,7 +75,7 @@ class main(pyglet.window.Window):
             self.draw_turnElem(x, y)
         elif self.curr_elem == 'line':
             self.draw_lineElem(x, y)   
-        print("Drew?")
+        self.on_draw()
         
         
     def on_mouse_press(self, x, y, button, modifiers):
@@ -84,12 +86,15 @@ class main(pyglet.window.Window):
             self.currelem_save.insert(0, self.curr_elem)
             self.save_elems.append(self.currelem_save)
             self.render_elems.append(self.currelem_obj)
+            if self.curr_elem == 'start':
+                self.curr_elem = 'line'
         else:
             self.first = False
         self.currelem_save = [x, y]
         self.currelem_obj = []
 
-
+        self.on_draw()
+        
         '''
         if self.curr_elem == 'start':
             pass #Register elem into the gridEngine
@@ -105,7 +110,7 @@ class main(pyglet.window.Window):
         The startingStrip is being given a fixed length to allow space for car objs
         Will enforce the length limit next
         '''
-        print("draw_startingStrip")
+        #print("draw_startingStrip")
         self.currelem_obj = StartingStrip(Point(*self.currelem_save), Point(x, y))
         self.currelem_obj.render(1, 1, self.batch)
 
@@ -134,6 +139,7 @@ class main(pyglet.window.Window):
             # but is required for the GUI to not freeze
             #
             event = self.dispatch_events()
+            self.on_draw()
         
 
 x = main(500, 500)

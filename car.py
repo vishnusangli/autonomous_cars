@@ -83,12 +83,12 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         lower = [cen_front.xPos + diffx, cen_front.yPos + diffy]
         lower += [cen_back.xPos + diffx, cen_back.yPos + diffy]
 
-        upper = [cen_front.xPos - abs(diffx), cen_front.yPos - abs(diffy)]
-        ref = Point(*upper)
-        cen_point = Point(cen_x, cen_y)
-        op_angle = ref.angle(cen_point) - np.arctan(np.divide(np.divide(self.dims[0], 2), np.divide(self.dims[1], 2)))
-        self.try_render = shapes.Rectangle(*upper, height = self.dims[0], width = self.dims[1], color = (255, 255, 255), batch = batch)
-        self.try_render.rotation = - rad_deg(op_angle)  #At this point I don't even know what I'm doing just give me a goddamn break
+        upper = [cen_front.xPos - diffx, cen_front.yPos - diffy]
+        #ref = Point(*upper)
+        #cen_point = Point(cen_x, cen_y)
+        #op_angle = ref.angle(cen_point) - np.arctan(np.divide(np.divide(self.dims[0], 2), np.divide(self.dims[1], 2)))
+        #self.try_render = shapes.Rectangle(*upper, height = self.dims[0], width = self.dims[1], color = (255, 255, 255), batch = batch)
+        #self.try_render.rotation = - rad_deg(op_angle)  #At this point I don't even know what I'm doing just give me a goddamn break
         #print(- rad_deg(rad_reduce(op_angle)))
 
 

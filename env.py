@@ -81,7 +81,7 @@ class TrackElement:
         self.endPoint = end
         self.prevElem = prev
 
-        self.color = (255, 255, 255)
+        self.color = (0, 0, 0)
         self.friction = 1.0    
         self.render_objs = []
         self.lims = None

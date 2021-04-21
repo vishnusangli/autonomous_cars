@@ -201,7 +201,7 @@ def funcsolve(f, g, lims, e = 1e-4, step = 0.2, min_step = 0.001):
             if prev and not curr: #Was converging and is not now
                 pot_lim = [x - step, x]
                 if could_converge(pot_lim) and step >= min_step: #Could it have converged; include a lower limit on the step
-                    return funcsolve(f, g, pot_lim, step = np.divide(step, 10))#Recursive call with smaller range and step
+                    return funcsolve(f, g, pot_lim, step = np.divide(step, 10)) #Recursive call with smaller range and step
             prev = curr
         x += step
     return prev_existx, False
