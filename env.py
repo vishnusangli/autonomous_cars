@@ -9,7 +9,7 @@ World and track width are fixed, should not be changed
 '''
 trackWidth = 20
 
-class Track:
+class Track: 
     '''
     Track objects represent the entire world
     '''
@@ -81,7 +81,7 @@ class TrackElement:
         self.endPoint = end
         self.prevElem = prev
 
-        self.color = (0, 0, 0)
+        self.color = (255, 255, 255)
         self.friction = 1.0    
         self.render_objs = []
         self.lims = None
@@ -262,7 +262,7 @@ class TurnElement(TrackElement):
 
 
 class gridEngine:
-    def __init__(self, height, width):
+    def __init__(self, width, height):
         self.height = height
         self.width = width
         self.grid = self.make_grid()

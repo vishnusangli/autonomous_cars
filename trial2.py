@@ -12,23 +12,23 @@ window = pyglet.window.Window(960, 540)
 batch = pyglet.graphics.Batch()
 
 
+line = None
+line1 = shapes.Line(0, 270, 960, 270, batch=batch)
+line2 = shapes.Line(480, 0, 480, 540, batch=batch)
 
-line = shapes.Line(100, 100, 100, 200, batch=batch)
-arc = shapes.Arc(100, 400, 34, segments=25, angle=np.pi, color=(255, 255, 0), batch=batch)
-rect = shapes.Rectangle(500, 500, height = 70, width = 30, color=(255, 255, 0), batch=batch)
-rect.rotation = - 45
-arc2 = shapes.Arc(100, 0, 100, segments=200, angle=np.pi/2, color=(255, 255, 0), batch=batch)
-arc2.rotation = -90
-line2 = shapes.Line(100, 100, 200, 100, batch=batch)
+its_angle = np.pi/4
+its_rotation = 0
+try_arc = shapes.Arc(480, 270, 100, segments=25, angle=its_angle, color=(255, 255, 255), batch=batch)
+try_arc.rotation = its_rotation
 
-frame = 0
-def update_frame(x, y):
-    global frame
-
-    if frame == None or frame == 20:
-        frame = 0
-    else:
-        frame += 1
+def update_frame(dt):
+    global try_arc
+    global its_angle
+    global its_rotation
+    #its_angle += np.multiply(np.pi/16, dt)
+    its_rotation = -45
+    try_arc = shapes.Arc(480, 270, 100, segments=25, angle=its_angle, color=(255, 255, 255), batch=batch)
+    try_arc.rotation = its_rotation
     batch.draw()
 move = True
 
@@ -37,9 +37,9 @@ def on_mouse_press(x, y, button, modifiers):
     global line
     global move
     if move:
-        line = shapes.Line(100, 100, x, y, batch=batch)
-        do_thing(100, 100, x, y, batch)
-        do_thing2(100, 100, x, y, batch)
+        line = shapes.Line(480, 270, x, y, batch=batch)
+        do_thing(480, 270, x, y, batch)
+        do_thing2(480, 270, x, y, batch)
     move = not move
 
 @window.event
@@ -47,15 +47,15 @@ def on_mouse_motion(x, y, dx, dy):
     global line
     global move
     if (move):
-        line = shapes.Line(100, 100, x, y, batch=batch)
-        do_thing(100, 100, x, y, batch)
-        do_thing2(100, 100, x, y, batch)
+        line = shapes.Line(480, 270, x, y, batch=batch)
+        do_thing(480, 270, x, y, batch)
+        do_thing2(480, 270, x, y, batch)
 
 
 #@window.event
 def on_mouse_drag(x, y, dx, dy, buttons, modifiers):
     global line
-    line = shapes.Line(100, 100, x, y, width=19, batch=batch)
+    line = shapes.Line(480, 270, x, y, width=19, batch=batch)
 
 
 
@@ -65,6 +65,8 @@ def on_draw():
     window.clear()
     batch.draw()
 
+line5 = None
+line6 = None
 line7 = None
 def do_thing(x1, y1, x2, y2, batch):
     global line5
@@ -101,16 +103,16 @@ def do_thing2(x1, y1, x2, y2, batch):
     global arc6
     global arc7
 
-    start = Point(x1, y1, np.pi/2)
+    start = Point(x1, y1, 0)
     end = Point(x2, y2)
-    halfpi = np.pi/2
     width = 10
 
-    try_val = turnCalc(start, end)
+    try_val = circCalc(start, end)
     if try_val != None:
         anchor, radius, phi, rotate = try_val
         #print(start, end, anchor, radius, phi, rotate)
         #print(rad_deg(rotate))
+        phi = 2 * np.pi
         arc5 = shapes.Arc(anchor.xPos, anchor.yPos, radius, segments=25, angle=phi, color=(255, 255, 255), batch=batch)
         arc5.rotation = rotate
 
@@ -120,5 +122,5 @@ def do_thing2(x1, y1, x2, y2, batch):
         arc7 = shapes.Arc(anchor.xPos, anchor.yPos, radius + width, segments=25, angle=phi, color=(255, 255, 255), batch=batch)
         arc7.rotation = rotate
     
-pyglet.clock.schedule(update_frame, 1/10.0)
+pyglet.clock.schedule_interval(update_frame, 1/60.0)
 pyglet.app.run()

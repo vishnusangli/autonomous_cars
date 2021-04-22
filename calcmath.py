@@ -24,16 +24,15 @@ class Point:
             d = np.divide(other.yPos - self.yPos, other.xPos - self.xPos)
         angle = np.arctan(d) 
     
-        if (angle < 0 and self.yPos < other.yPos):
-            angle += np.pi #Negative angles in quadrant 4 to quadrant 2
-        
-        elif d == np.inf and self.yPos > other.yPos:
+        if d == np.inf and self.yPos > other.yPos:
             angle = -np.pi/2 #90 degrees to 270 degrees
+        elif (angle < 0 and self.yPos < other.yPos):
+            angle += np.pi #Negative angles in quadrant 4 to quadrant 2
 
         elif angle > 0 and self.yPos > other.yPos:
             angle = - np.pi + angle #Positive angles in quadrant 1 to quadrant 3
         
-        elif angle == 0 and self.xPos > other.xPos:
+        elif angle == 0 and self.xPos >= other.xPos:
             angle = np.pi
         
     
@@ -61,7 +60,12 @@ class Point:
         Returns gradient
         '''
         if x1 == x2:
-            return (y2 - y1) * np.inf
+            if y2 > y1:
+                return  np.inf
+            elif y2 < y1:
+                return -np.inf
+            else:
+                return 0
         val = np.divide(y1 - y2, x1 - x2)
         return val
 
@@ -75,7 +79,7 @@ class Point:
         return 'Point[{0:4.4f}, {1:4.4f}]|'.format(self.xPos, self.yPos) + str(self.dirVec)
 
 def rad_reduce(x):
-    if x < 0:
+    while x < 0:
         x = (2 * np.pi) + x
         
     while x > 2 * np.pi:
@@ -83,8 +87,19 @@ def rad_reduce(x):
     
     if x > np.pi:
         x -= 2 * np.pi
-    
     return x
+
+def rad_sincircle(x):
+    '''
+    Reducing angle to only [0, 2pi], not [-pi, pi]
+    '''
+    while x < 0:
+        x = (2 * np.pi) + x
+        
+    while x > 2 * np.pi:
+        x -= 2 * np.pi
+    return x
+
 
 def frame_angle(lims, theta):
     theta = rad_reduce(theta)
@@ -134,7 +149,6 @@ def turnCalc(start, end):
     
     
     angle = start.angle(end)
-
     angle = frame_angle([deriv - halfpi, deriv + halfpi], angle) 
 
     if angle == None:
@@ -151,8 +165,32 @@ def turnCalc(start, end):
     anchor = Point(start.xPos + (radius * np.cos(standard)), start.xPos + (radius * np.sin(standard)))
     rotate = min([anchor.angle(start), anchor.angle(end)])
     rotate = -rad_deg(rotate)
+    #print(rotate)
     return anchor, radius, phi, rotate
 
+def circCalc(start, end):
+    '''
+    Attempt at recreating turnCalc through different methods to solve the issue
+    '''
+    start_dir = rad_reduce(start.dirVec)
+    grad_angle = start.angle(end)
+    grad_angle = frame_angle([start_dir - np.pi/2, start_dir + np.pi/2], grad_angle)
+    if grad_angle == None:
+        #print("Fail")
+        return None
+    #print("Valid")
+    standard = start_dir + np.pi/2
+    if start_dir > grad_angle:
+        standard = start_dir - np.pi/2
+    
+    theta = abs(grad_angle - standard)
+    radius = np.divide(start.distance(end), 2 * np.cos(theta))
+    anchor = angledpoint_end(start, standard, radius)
+    phi = rad_reduce(2 * (np.pi/2 - theta))
+    min_ang = min(rad_sincircle(anchor.angle(a)) for a in [start, end])
+
+    rotate = - rad_deg(min_ang)
+    return anchor, radius, phi, rotate
 
 exists = lambda x: x >= -np.inf
 def funcsolve(f, g, lims, e = 1e-4, step = 0.2, min_step = 0.001):
