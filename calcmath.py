@@ -56,12 +56,10 @@ class Point:
         val = np.divide(self.yPos - other.yPos, self.xPos - other.xPos)
         return val
     
-    def loc_gradient(x1, y1, x2, y2):
+    def loc_gradient(self, x1, y1, x2, y2):
         '''
         Returns gradient
         '''
-        if x1 == x2:
-            return (y2 - y1) * np.inf
         val = np.divide(y1 - y2, x1 - x2)
         return val
 
@@ -201,7 +199,7 @@ def funcsolve(f, g, lims, e = 1e-4, step = 0.2, min_step = 0.001):
             if prev and not curr: #Was converging and is not now
                 pot_lim = [x - step, x]
                 if could_converge(pot_lim) and step >= min_step: #Could it have converged; include a lower limit on the step
-                    return funcsolve(f, g, pot_lim, step = np.divide(step, 10)) #Recursive call with smaller range and step
+                    return funcsolve(f, g, pot_lim, step = np.divide(step, 10))#Recursive call with smaller range and step
             prev = curr
         x += step
     return prev_existx, False
