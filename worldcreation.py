@@ -95,7 +95,7 @@ def on_mouse_press(x, y, button, modifiers):
 
     if not first:
         currelem_save.insert(0, curr_elem)
-        currelem_save.append([x, y])
+        currelem_save.append(currelem_obj.endPoint.givePos()) #Treats cases of current invalid position and line_elem projection
         save_elems.append(currelem_save)
         render_elems.append(currelem_obj)
         if curr_elem == 'start':
@@ -134,9 +134,12 @@ def draw_turnElem( x, y, min_rad = 10):
     global batch
 
     global err_list
-    err_list = [render_elems[-1].endPoint, [x, y]]
-    currelem_obj = TurnElement(render_elems[-1], Point(x, y))
-    currelem_obj.render(1, 1, batch)
+    stuff = circCalc(render_elems[-1].endPoint, Point(x, y))
+    if stuff != None and stuff[1] >= 2 * trackWidth:
+        #print(stuff)
+        err_list = [render_elems[-1].endPoint, [x, y]]
+        currelem_obj = TurnElement(render_elems[-1], Point(x, y))
+        currelem_obj.render(1, 1, batch)
     
 def draw_lineElem( x, y, min_length = 1):
     '''

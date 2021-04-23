@@ -26,7 +26,7 @@ def update_frame(dt):
     global its_angle
     global its_rotation
     #its_angle += np.multiply(np.pi/16, dt)
-    its_rotation = -45
+    its_rotation -= np.multiply(20, dt)
     try_arc = shapes.Arc(480, 270, 100, segments=25, angle=its_angle, color=(255, 255, 255), batch=batch)
     try_arc.rotation = its_rotation
     batch.draw()
@@ -94,6 +94,8 @@ def do_thing(x1, y1, x2, y2, batch):
 arc5 = None
 arc6 = None
 arc7 = None
+line8 = None
+line9 = None
 
 rad_deg = lambda x: x * (180./np.pi)
 deg_rad = lambda x: x * (np.pi/180.)
@@ -102,8 +104,10 @@ def do_thing2(x1, y1, x2, y2, batch):
     global arc5
     global arc6
     global arc7
+    global line8
+    global line9
 
-    start = Point(x1, y1, 0)
+    start = Point(x1, y1, np.pi/2)
     end = Point(x2, y2)
     width = 10
 
@@ -112,7 +116,8 @@ def do_thing2(x1, y1, x2, y2, batch):
         anchor, radius, phi, rotate = try_val
         #print(start, end, anchor, radius, phi, rotate)
         #print(rad_deg(rotate))
-        phi = 2 * np.pi
+        #phi = 2 * np.pi
+        #print(start, end, anchor, rotate)
         arc5 = shapes.Arc(anchor.xPos, anchor.yPos, radius, segments=25, angle=phi, color=(255, 255, 255), batch=batch)
         arc5.rotation = rotate
 
@@ -121,6 +126,9 @@ def do_thing2(x1, y1, x2, y2, batch):
 
         arc7 = shapes.Arc(anchor.xPos, anchor.yPos, radius + width, segments=25, angle=phi, color=(255, 255, 255), batch=batch)
         arc7.rotation = rotate
+
+        line8 = shapes.Line(0, anchor.yPos, 960, anchor.yPos, batch=batch)
+        line9 =  shapes.Line(anchor.xPos, 0, anchor.xPos, 540, batch=batch)
     
 pyglet.clock.schedule_interval(update_frame, 1/60.0)
 pyglet.app.run()

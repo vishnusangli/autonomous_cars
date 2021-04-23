@@ -94,10 +94,10 @@ def rad_sincircle(x):
     Reducing angle to only [0, 2pi], not [-pi, pi]
     '''
     while x < 0:
-        x = (2 * np.pi) + x
+        x += (2 * np.pi)
         
     while x > 2 * np.pi:
-        x -= 2 * np.pi
+        x -= (2 * np.pi)
     return x
 
 
@@ -109,16 +109,18 @@ def frame_angle(lims, theta):
     If invalid angle is given, first loop runs until overshot, after which second doesn't, returning 
     an angle that is beyond range
     '''
+    lims.sort()
+    while theta > lims[1]:
+        theta -= (2 * np.pi)
+
     while theta < lims[0]:
         theta += (2 * np.pi)
         
-    while theta > lims[1]:
-        theta -= (2 * np.pi)
-    
     if lims[0] <= theta <= lims[1]:
         return theta
     else:
         #print(lims, theta)
+        #print([a == theta for a in lims])
         return None
 
 
@@ -187,9 +189,12 @@ def circCalc(start, end):
     radius = np.divide(start.distance(end), 2 * np.cos(theta))
     anchor = angledpoint_end(start, standard, radius)
     phi = rad_reduce(2 * (np.pi/2 - theta))
-    min_ang = min(rad_sincircle(anchor.angle(a)) for a in [start, end])
-
+    angles = [anchor.angle(start), anchor.angle(end)]
+    min_ang = angles[1]
+    if is_clockwise(angles[0], angles[1], rad_reduce(start.dirVec)):
+        min_ang = angles[0]
     rotate = - rad_deg(min_ang)
+
     return anchor, radius, phi, rotate
 
 exists = lambda x: x >= -np.inf
@@ -268,7 +273,7 @@ def circ_func(anchor, radius, startPhi, endPhi, upper = True):
     if upper:
         assert startPhi >= 0 and endPhi >= 0, "Circle angles need to be of same semicircle type"
     else:
-        assert startPhi >= 0 and endPhi >= 0, "Circle angles need to be of same semicircle type"
+        assert startPhi <= 0 and endPhi <= 0, "Circle angles need to be of same semicircle type"
     def return_func(x):
         val = radius**2 - np.power(x - anchor.xPos, 2)
         if val < 0:
@@ -296,12 +301,11 @@ def angledpoint_end(start, angle, length):
     end = Point(start.xPos + (length * np.cos(angle)), start.yPos + (length * np.sin(angle)), angle)
     return end
 
-def is_clockwise(startPhi, endPhi):
+def is_clockwise(startPhi, endPhi, startAng):
     '''
     Determines whether the arc's orientation was clockwise or anti-clockwise
     Current usage - helping set_endDir() for turn element
     '''
     startPhi = rad_reduce(startPhi)
-    endPhi = rad_reduce(endPhi)
-
-    return endPhi > startPhi
+    startAng = frame_angle([startPhi - np.pi, startPhi + np.pi], startAng)
+    return startAng > startPhi

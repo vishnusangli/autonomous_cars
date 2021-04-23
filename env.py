@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize.optimize import _endprint
+
 
 from calcmath import *
 from pyglet import shapes
@@ -117,8 +117,8 @@ class LineElement(TrackElement):
         '''
         perp_angle = self.startPoint.dirVec - np.pi/2
         
-        diffx = trackWidth * np.cos(perp_angle)
-        diffy = trackWidth * np.sin(perp_angle)
+        diffx = np.divide(trackWidth, 2) * np.cos(perp_angle)
+        diffy = np.divide(trackWidth, 2) * np.sin(perp_angle)
         lower = [self.startPoint.xPos + diffx, self.startPoint.yPos + diffy]
         lower += [self.endPoint.xPos + diffx, self.endPoint.yPos + diffy]
 
@@ -200,9 +200,9 @@ class TurnElement(TrackElement):
         #Where are point directions settled?
         self.anchor = None
         self.points = self.wireFrame()
+        #print(self.startPoint)
+        #print(self.startPoint.dirVec)
         
-        
-        self.wireFrame()
         self.set_endDir()
         self.funcs = self.wallFunc()
         
@@ -211,10 +211,10 @@ class TurnElement(TrackElement):
         startPhi = self.anchor.angle(self.startPoint)
         endPhi = self.anchor.angle(self.endPoint)
 
-        if is_clockwise(startPhi, endPhi):
-            self.endPoint.angle = rad_reduce(endPhi - np.pi/2)
+        if is_clockwise(startPhi, endPhi, self.startPoint.dirVec):
+            self.endPoint.dirVec = rad_reduce(endPhi + np.pi/2)
         else:
-            self.endPoint.angle = rad_reduce(endPhi + np.pi/2)
+            self.endPoint.dirVec = rad_reduce(endPhi - np.pi/2)
     
     def wireFrame(self):
         '''
@@ -226,7 +226,7 @@ class TurnElement(TrackElement):
         # difference vector magnitude / cos(vector angle - perp direction) gives radius
         #go in perp direction to find anchor
         side = np.divide(trackWidth, 2)
-        self.anchor, radius, phi, rotate = turnCalc(self.startPoint, self.endPoint)
+        self.anchor, radius, phi, rotate = circCalc(self.startPoint, self.endPoint)
         to_return = [[self.anchor.xPos, self.anchor.yPos, radius + side, phi, rotate]]
         to_return.append([self.anchor.xPos, self.anchor.yPos, radius - side, phi, rotate])
         self.lims = [self.anchor.xPos - abs(radius), self.anchor.xPos + abs(radius)]
@@ -296,12 +296,10 @@ class gridEngine:
         x = int(lims[0])
         while not y < np.inf:
             x += 0.2
-            print(x)
-            if x > 30:
-                return
+            #print(x)
+
             y = mainfunc(x)
-        if x == 30:
-            print("Hello")
+
         x = int(x)
         prev = [x, int(y)]
         grids = [prev]
