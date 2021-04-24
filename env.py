@@ -84,7 +84,6 @@ class TrackElement:
         self.color = (255, 255, 255)
         self.friction = 1.0    
         self.render_objs = []
-        self.lims = None
 
 class LineElement(TrackElement):
     '''
@@ -124,7 +123,6 @@ class LineElement(TrackElement):
 
         upper = [self.startPoint.xPos - diffx, self.startPoint.yPos - diffy]
         upper += [self.endPoint.xPos - diffx, self.endPoint.yPos - diffy]
-        self.lims = [self.startPoint.xPos - abs(diffx), self.endPoint.xPos + abs(diffx)]
 
         to_return = [lower, upper]
         return to_return
@@ -133,7 +131,7 @@ class LineElement(TrackElement):
         '''
         Returns a list of ranged functions that characterize the element
         '''
-        to_return = [line_func(*a) for a in self.points]
+        to_return = [math_func(a, True) for a in self.points]
         return to_return
 
     def render(self, x_fac, y_fac, batch):
@@ -229,7 +227,6 @@ class TurnElement(TrackElement):
         self.anchor, radius, phi, rotate = circCalc(self.startPoint, self.endPoint)
         to_return = [[self.anchor.xPos, self.anchor.yPos, radius + side, phi, rotate]]
         to_return.append([self.anchor.xPos, self.anchor.yPos, radius - side, phi, rotate])
-        self.lims = [self.anchor.xPos - abs(radius), self.anchor.xPos + abs(radius)]
         return to_return
         
     
@@ -250,14 +247,18 @@ class TurnElement(TrackElement):
         angles = [self.anchor.angle(self.startPoint), self.anchor.angle(self.endPoint)]
         min_a = min(angles)
         max_a = max(angles)
+        if min_a < 0 and max_a == np.pi:
+            max_a = min_a
+            min_a = -np.pi #Treating that issue
         to_return = []
         if min_a < 0 and max_a > 0:
             for elem in self.points:
-                to_return.append(circ_func(self.anchor, elem[2], min_a, 0, False))
-                to_return.append(circ_func(self.anchor, elem[2], 0, max_a, True))
+                
+                to_return.append(math_func([self.anchor, elem[2], min_a, 0], False, False))
+                to_return.append(math_func([self.anchor, elem[2], 0, max_a], False, True))
         else:
             for elem in self.points:
-                to_return.append(circ_func(self.anchor, elem[2], min_a, max_a, min_a > 0))
+                to_return.append(math_func([self.anchor, elem[2], min_a, max_a], False, min_a > 0))
         return to_return
 
 
@@ -267,18 +268,20 @@ class gridEngine:
         self.width = width
         self.grid = self.make_grid()
         
-    def make_grid(self):
+    def make_grid(self) -> list:
         main = []
         for x in range(self.width):
             row = []
             for y in range(self.height):
                 row.append([])
             main.append(row)
+        return main
     
-    def access(self, x, y):
+    def access(self, x, y) -> list:
         assert x < self.width, "Invalid grid width"
         assert y < self.height, "invalid grid height"
-        
+        #x, y are not integers, it's shitting over everything
+        print(x, y)
         to_return = self.grid[x][y]
         return to_return
     
@@ -288,24 +291,34 @@ class gridEngine:
             loc.append(elem)
 
 
-    def grid_search(self, mainfunc, lims):
+    def grid_search(self, func_obj):
         '''
         The grid search, but altered to incorporate a list-based mainfunc
         '''
-        y = mainfunc(lims[0])
+        
+        lims = func_obj.lims
+        if func_obj.line_bool and func_obj.grad == np.inf:
+            y_range = func_obj.give_vertrange()
+            x = int(lims[0])
+            y = int(y_range[0])
+            grids = []
+            while y < y_range[1]:
+                potential = self.check_box(func_obj, x, int(y))
+                grids.append([x, y])
+                if potential[0] < np.inf:
+                    return True, potential, grids
+                y += 1
+            return False, [], grids
+        #Check if vertical function
+        y = func_obj.func(lims[0])
         x = int(lims[0])
-        while not y < np.inf:
-            x += 0.2
-            #print(x)
+        #step = min(0.2, np.divide(lims[1] - lims[0], num)) #Don't make abs, if erroneous lims step still works
 
-            y = mainfunc(x)
-
-        x = int(x)
         prev = [x, int(y)]
         grids = [prev]
-        potential = self.check_box(mainfunc, int(x), int(y))
-        if potential < np.inf:
-            True, potential, grids
+        potential = self.check_box(func_obj, int(x), int(y))
+        if potential[0] < np.inf:
+            return True, potential, grids
         
         x += 1
         run = True
@@ -314,46 +327,49 @@ class gridEngine:
             if x > lims[1]:
                 x = lims[1]
                 run = False
-            y = mainfunc(x)
-            if y > -np.inf:
+            y = func_obj.func(x)
+            if exists(y):
+                x = round(x)
                 red_y = int(y)
-                pots = [self.check(mainfunc, x, red_y)]
+                val = self.check_box(func_obj, x, red_y)
+                pots = {val[0]:val}
                 grids.append([x, red_y])
-                loop_x = x - 1
+                loop_x = round(x - 1)
                 if red_y > prev[1]: #If they're not adjacent
                     for y_use in range(prev[1], red_y, 1):
-                        pots.append([self.check(mainfunc, loop_x, y_use)])
+                        val = self.check_box(func_obj, loop_x, y_use)
+                        pots[val[0]] = val
                         grids.append([loop_x, red_y])
                 else:
                     for y_use in range(prev[1], red_y, -1):
-                        pots.append([self.check(mainfunc, loop_x, y_use)])
+                        val = self.check_box(func_obj, loop_x, y_use)
+                        pots[val[0]] = val
                         grids.append([loop_x, red_y])
                 
-
                     grids.append([loop_x, red_y])
                 prev = [x, red_y]
-                if any([a < np.inf for a in pots]):
-                    return True, min(pots), grids
-
+                cont_der = min(pots.keys()) #contender
+                if cont_der < np.inf:
+                    return True, pots[cont_der], grids
             x += 1
-        return False, np.inf, grids
+        return False, [], grids
 
             
 
     def check_box(self, mainfunc, x, y):
         elems = self.access(x, y)
-        obstructs = []
+        obstructs = {}
         for e in elems:
-            success, val = self.find_obstruct(mainfunc, e.funcs, e.lims)
+            success, val = self.find_obstruct(mainfunc, e.funcs)
             if success:
-                obstructs.append(val)
+                obstructs[val[0]] = val
         if obstructs:
-            return min(obstructs)
+            return obstructs[min(obstructs.keys())]
         else:
-            return np.inf
+            return [np.inf, np.inf]
 
 
-    def find_obstruct(self, mainfunc, funcs, lims):
+    def find_obstruct(self, mainfunc, funcs):
         '''
         Takes in an elemFunc
         
@@ -377,20 +393,21 @@ class gridEngine:
         Keep empty obstructions list outside, append those found.
         At the end of the given grid box search, check if obstruction found and follow same exit procedure
         '''
-        obstructions = []
+        obstructions = {}
         for f in funcs:
-            x_val, success = funcsolve(mainfunc, f, lims)
+            success, loc = systemsolve(mainfunc, f)
+            #x_val, success = funcsolve(mainfunc, f, lims)
             if success:
-                obstructions.append(x_val)
+                obstructions[loc[0]] = loc
         if any(obstructions):
-            xval = min(obstructions)
-            yval = mainfunc(xval)
-            assert yval > -np.inf, "Invalid intersection result from funcsolve"
-            return True, xval
+            xval = min(obstructions.keys())
+            yval = obstructions[xval][1]
+            assert exists(yval), "Invalid intersection result from funcsolve"
+            return True, obstructions[xval]
         else:
             #Potential error, does mainfunc(lims[1]) exist? Must ensure
             #Max pos here is only needed in line of sight, can just implement anglepoint_end() in the function that calls this one
-            return False, np.inf
+            return False, None
 
     def register_track(self, grids, elem):
         for a in grids:
@@ -404,13 +421,13 @@ class gridEngine:
         '''
         grids_passed = []
         for f in elem.funcs:
-            success, inters, grids = self.grid_search(f, elem.lims)
+            success, inters, grids = self.grid_search(f)
             if success:
-                return False
+                return False, []
             grids_passed += grids
-        return grids_passed
+        return True, grids_passed
 
-        
+
 '''
 Inspired to write an elemFunc class, that stores some function and it's limits
 

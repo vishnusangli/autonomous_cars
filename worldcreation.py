@@ -16,9 +16,12 @@ from env import *
 import sys
 
 key = pyglet.window.key
-world_dims = [1000, 1000] #width, height
+#world_dims = [1000, 1000] #width, height
 
 window = pyglet.window.Window(960, 540)
+grid = gridEngine(960, 540)
+pot_grids = []
+
 batch = pyglet.graphics.Batch()
 
 save_elems = [] #A list of all coordinates and 
@@ -28,14 +31,14 @@ curr_elem = 'start' #Others -- 'turn', 'line'
 first = True
 currelem_save = [] #pair of coordinates
 currelem_obj = [] #The current track elem render objs
-x_fac = np.divide(500, world_dims[0])
-y_fac = np.divide(500, world_dims[1])
-err_list = []
+x_fac = np.divide(500, 960)
+y_fac = np.divide(500, 540)
+#err_list = []
 
-engine = gridEngine(*world_dims)
+#engine = gridEngine(*world_dims)
 batch = pyglet.graphics.Batch()
 
-
+print('starting now')
 @window.event
 def on_draw():
     global batch
@@ -69,7 +72,7 @@ def on_key_press( symbol, modifiers):
 @window.event
 def on_mouse_motion(x, y, dx, dy):
     #print(x, y)
-
+    #print("wtf")
     global first
     global curr_elem
     if first:
@@ -92,15 +95,20 @@ def on_mouse_press(x, y, button, modifiers):
     global first
     global currelem_save
     global currelem_obj
+    global grid
+    global pot_grids
 
     if not first:
         currelem_save.insert(0, curr_elem)
         currelem_save.append(currelem_obj.endPoint.givePos()) #Treats cases of current invalid position and line_elem projection
         save_elems.append(currelem_save)
         render_elems.append(currelem_obj)
+        #grid.register_track(pot_grids, currelem_obj)
+        pot_grids = []
         if curr_elem == 'start':
             curr_elem = 'line'
     else:
+        print("First point")
         first = False
     currelem_save = [[x, y]]
     currelem_obj = []
@@ -124,6 +132,7 @@ def draw_startingStrip( x, y, length = 20):
     global currelem_obj
     global batch
     global currelem_save
+    #print("here?")
 
     currelem_obj = StartingStrip(Point(*currelem_save[0]), Point(x, y))
     currelem_obj.render(1, 1, batch)
@@ -133,13 +142,23 @@ def draw_turnElem( x, y, min_rad = 10):
     global currelem_obj
     global batch
 
-    global err_list
+    #global err_list
+
+    global grid
+    global pot_grids
+
     stuff = circCalc(render_elems[-1].endPoint, Point(x, y))
     if stuff != None and stuff[1] >= 2 * trackWidth:
         #print(stuff)
-        err_list = [render_elems[-1].endPoint, [x, y]]
-        currelem_obj = TurnElement(render_elems[-1], Point(x, y))
-        currelem_obj.render(1, 1, batch)
+        #err_list = [render_elems[-1].endPoint, [x, y]]
+        val = TurnElement(render_elems[-1], Point(x, y))
+        #success, grids = grid.check_track(val)
+        success, grids = True, []
+        if success:
+            pot_grids = grids
+            currelem_obj = val
+            currelem_obj.render(1, 1, batch)
+
     
 def draw_lineElem( x, y, min_length = 1):
     '''
@@ -148,12 +167,21 @@ def draw_lineElem( x, y, min_length = 1):
     '''
     global currelem_obj
     global batch
+
+    global grid
+    global pot_grids
+
     start = render_elems[-1].endPoint
     delt_y = (x - start.xPos) * np.tan(start.dirVec)
     y = start.yPos + delt_y
 
-    currelem_obj = LineElement(render_elems[-1], Point(x, y))
-    currelem_obj.render(1, 1, batch)
+    val = LineElement(render_elems[-1], Point(x, y))
+    #success, grids = grid.check_track(val)
+    success, grids = True, []
+    if success:
+        pot_grids = grids
+        currelem_obj = val
+        currelem_obj.render(1, 1, batch)
 
     
 
@@ -163,4 +191,4 @@ finally:
     print("Whatever happened, look at this shit")
     print(save_elems)
     print(render_elems)
-    print("Final error list: ", err_list)
+    #print("Final error list: ", err_list)

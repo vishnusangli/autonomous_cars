@@ -47,7 +47,7 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         '''
         self.speed_change(controls, dt)
         if self.speed != 0 : #Can only steer when moving
-            self.steering_turn(controls, dt)
+            self.regular_turn(controls, dt)
         self.apply_friction(dt)
         self.move(dt)
     

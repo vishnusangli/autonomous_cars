@@ -55,19 +55,7 @@ class Point:
         val = np.divide(self.yPos - other.yPos, self.xPos - other.xPos)
         return val
     
-    def loc_gradient(x1, y1, x2, y2):
-        '''
-        Returns gradient
-        '''
-        if x1 == x2:
-            if y2 > y1:
-                return  np.inf
-            elif y2 < y1:
-                return -np.inf
-            else:
-                return 0
-        val = np.divide(y1 - y2, x1 - x2)
-        return val
+
 
     def givePos(self):
         return [self.xPos, self.yPos]
@@ -77,6 +65,20 @@ class Point:
     
     def __repr__(self):
         return 'Point[{0:4.4f}, {1:4.4f}]|'.format(self.xPos, self.yPos) + str(self.dirVec)
+
+def loc_gradient(x1, y1, x2, y2):
+    '''
+    Returns gradient
+    '''
+    if x1 == x2:
+        if y2 > y1:
+            return  np.inf
+        elif y2 < y1:
+            return -np.inf
+        else:
+            return 0
+    val = np.divide(y1 - y2, x1 - x2)
+    return val
 
 def rad_reduce(x):
     while x < 0:
@@ -309,3 +311,259 @@ def is_clockwise(startPhi, endPhi, startAng):
     startPhi = rad_reduce(startPhi)
     startAng = frame_angle([startPhi - np.pi, startPhi + np.pi], startAng)
     return startAng > startPhi
+
+
+class math_func:
+    def __init__(self, points, line_bool, args = True):
+        '''
+        A revised Function that class that can produce various aspects of the enclosed function when needed
+        Catered towards three different types of functions:
+        -Linear Functions with usable gradient
+        -Vertical lines
+        -Circular functions
+
+        If line function: 
+        points gives [x1, y1, x2, y2]
+
+        if circ function:
+        points gives [anchorPoint, radius, startPhi, endPhi]
+        '''
+        self.points = points
+        self.line_bool = line_bool
+        self.args = args
+        if line_bool:
+            if self.points[0] == self.points[2]:
+                self.grad = np.inf
+                self.lims = [self.points[0], self.points[0]]
+                self.func = self.vert_func #Make the vertical function
+            else:
+                self.grad = loc_gradient(*self.points) #Make the regular function
+                self.lims = [self.points[0], self.points[2]]
+                self.lims.sort() #Could be the opposite way
+                #print(self.lims)
+
+                self.func = self.line_func
+                
+        else:
+            self.anchor = points[0]
+            self.angle_range = [rad_reduce(self.points[2]), rad_reduce(self.points[3])]
+            if self.angle_range[0] == np.pi and not args:
+                self.angle_range[0] = -np.pi
+            #print(self.angle_range)
+            self.angle_range.sort()
+            
+
+            if args:
+                assert self.angle_range[0] >= 0, "Circle angles need to be of same semicircle type"
+            else:
+                assert self.angle_range[1] <= 0, "Circle angles need to be of same semicircle type"
+            self.lims = self.det_circ_range()
+            self.func = self.circ_func
+
+    def find_overlap(self, other):
+        '''
+        Finds an overlap in the ranges of two functions
+        Returns success boolean, [min_x, max_x]
+        if failed, -- False, None
+        '''
+        other_lims = other.lims
+        use_range = [max(self.lims[0], other_lims[0]), min(self.lims[1], other_lims[1])]
+        if use_range[0] > use_range[1]:
+            return False, None
+        else:
+            return True, use_range
+            #print (use_range)
+
+    def give_vertrange(self):
+        '''
+        simple functions aimed at giving the vertical range of a vertical function
+        '''
+        vals = [self.points[1], self.points[3]]
+        vals.sort()
+        return vals
+
+    def det_circ_range(self):
+        '''
+        Determining the exact x range for the function
+        At this point, we have hte max and min angle and the hemisphere-confirmed angles
+        Idea for interpretation here -- all values will lie only between the max and min angle, nothing beyond
+        since this angle range does not cross the semicircle border
+        Given points element dictionary here
+        0 - anchorPoint
+        1 - radius
+        2 - StartPhi
+        3 - endPhi
+        '''
+
+        pot = [self.points[0].xPos + (self.points[1] * np.cos(a)) for a in self.angle_range]
+        pot.sort()
+        return pot
+
+    
+    def circ_func(self, x):
+        '''
+        The Circle function
+        Given points element dictionary here
+        0 - anchorPoint
+        1 - radius
+        2 - StartPhi
+        3 - endPhi
+        '''
+        if x < self.lims[0] or x > self.lims[1]:
+            return np.NaN
+        
+        val = self.points[1]**2 - np.power(x - self.points[0].xPos, 2)       
+        if val < 0:
+            return np.NaN 
+        val = np.sqrt(val)
+        if not self.args:
+            val = - val
+        y = val + self.anchor.yPos
+        return y
+        
+
+    def line_func(self, x):
+        '''
+        The regular linear function
+        Assumes points is comprised of startt and end points:
+        [x1, y1, x2, y2]
+        '''
+        if x < self.lims[0] or x > self.lims[1]:
+            return np.NaN
+        delt_y = x - self.points[0]
+        delt_y = delt_y * self.grad
+        return delt_y + self.points[1]
+
+
+    def vert_func(self, x, other_y):
+        '''
+        The vertical line function
+        '''
+        assert x == self.points[0]
+
+        if self.points[1] <= other_y <= self.points[3]:
+            return other_y
+        else:
+            return np.NaN
+    '''
+    Comparison functions below
+    Needed to incorporate the np.NaN thing
+    All functions used are singularly piecewise. If they start at a given point and end, they don't restart somewhere
+    If f(x1) exists and f(x2) does not, the upper lim lies between both. Since we know the upper and lower lims, we don't need to ever run
+    an np.NaN-returning function (when executed correctly)
+    '''
+    def deriv(self, x, step):
+        '''
+        Gives the function's derivative at a particular point
+        '''
+        if self.line_bool == True:
+            return self.grad
+        
+        if not exists(self.func(x)) or not exists(self.func(x - step)):
+            return np.NaN
+        else:
+            return np.divide(self.func(x) - self.func(x - step), step)
+
+    def diff(self, x, other):
+        '''
+        Gives the difference between two functions
+        '''
+        vals = [self.func(x), other.func(x)]
+        if any([not exists(a) for a in vals]):
+            return np.NaN
+        else:
+            return abs(vals[0] - vals[1])
+    
+    def is_converging(self, x, other, step):
+        '''
+        Same is_converging function, but here with np.NaN support
+        '''
+        if not exists(self.func(x)) or not exists(self.func(x - step)) or not exists(other.func(x - step)) or not exists(other.func(x)): 
+            return False
+       
+        if self.func(x) < other.func(x):
+            return self.deriv(x, step) > other.deriv(x, step)
+        elif self.func(x) > other.func(x):
+            return self.deriv(x, step) < other.deriv(x, step)
+        else: #Solution is found
+            return True
+
+    def did_converge(self, x, other, step):
+        '''
+        could_coverge, but with np.NaN support
+        '''
+        
+        start = self.func(x - step) < other.func(x - step)
+        end = self.func(x) < other.func(x)
+
+        return start ^ end
+
+    def single_interact(self, x, other):
+        '''
+        This function outlines the interaction between a vertical function andother func (could be vertical or not)
+        edit: this now is an arbitrary single x interaction
+        '''
+        this_range = []
+        other_range = []
+        if self.line_bool and self.grad == np.inf:
+            this_range = self.give_vertrange()
+        else:
+            this_range = [self.func(x), self.func(x)]
+        
+        if other.line_bool and other.grad == np.inf:
+            other_range = other.give_vertrange()
+        else:
+            other_range = [other.func(x), other.func(x)]
+        #print(this_range, other_range)
+        pot_val = max([this_range[0], other_range[0]])
+        if pot_val <= min([this_range[1], other_range[1]]):
+            return True, [x, pot_val] #vertical lowest point of intersection
+        else:
+            return False, None #Does not spill onto the next bits
+        
+        
+  
+def systemsolve(f_obj, g_obj, e = 1e-4, step = 0.2, conten_divis = 30, count = 3, lims = None):
+    '''
+    This is the potential candidate for funcsolve's successor
+    The plans for change are to expedite the range and elimination check
+    count - flagpoint for the recursive check, when end when reachedd 0
+    '''
+    #print(count)
+    if count == 3:
+        success, lims = f_obj.find_overlap(g_obj)
+        if not success:
+            return False, None
+
+    assert lims != None, "Recursive call lims arg is not handled properly"
+    if lims[0] == lims[1]:
+        return f_obj.single_interact(lims[0], g_obj)
+
+    new_step = np.divide(lims[1] - lims[0], conten_divis)
+    step = min(step, new_step) #Take the one that's more suited to the range 
+    #0.2 does not fit small ranges, like 0.9
+
+    x = lims[0]
+    prev_con = True
+    
+    run = True
+    while run:
+        if x > lims[1]:
+            x = lims[1]
+            run = False
+            
+        if f_obj.diff(x, g_obj) <= e:
+            return True, [x, f_obj.func(x)]
+
+        curr_con = f_obj.is_converging(x, g_obj, step)
+        '''
+        Do not need to confirm if both functions exist in the range
+        '''
+        if prev_con and not curr_con:
+            if f_obj.did_converge(x, g_obj, step) and count > 0:
+                success, val = systemsolve(f_obj, g_obj, step = np.divide(step,10), count = count -1, lims = [x - step, x])
+                if success: 
+                    return success, val
+        prev_con = curr_con
+        x += step
+    return False, None
