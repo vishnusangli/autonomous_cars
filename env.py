@@ -18,14 +18,12 @@ class Track:
     
     wireFrame = True
 
-    def __init__(self, track_elems, height, width, engine) -> None:
+    def __init__(self, track_elems, height, width, engine, filename) -> None:
         '''
         Track would've already been creaetd and verified, this is only placeholder
         '''
-        self.track_elements = track_elems
-        self.HEIGHT = height
-        self.WIDTH = width
-        self.engine = engine
+        self.filename = filename
+        self.tracks, self.engine = trackReader(self.filename)
         #Run the Track Engine and create according data structure
     
     def render(batch):
@@ -62,6 +60,55 @@ class Track:
             else:
                 sight_dict[a] = end
         return sight_dict
+    
+    def TrackReader(self):
+        f = open(self.filename, 'r')
+
+        track = []
+
+        line1 = f.readline()
+        line1 = line1.split(', ')
+        w = float(line1[0])
+        h = float(line1[1])
+
+
+        for line in f:
+            token = line.split(', ')
+            typ = token[0]
+            
+            x1 = float(token[1])
+            
+            y1 = float(token[2])
+            
+            x2 = float(token[3])
+            
+            y2 = float(token[4])
+
+
+            stpt = Points(x1, y1)
+            endpt = Points(x2, y2)
+
+            if len(track) == 0:
+                elem = StartingTrack(stpt, endpt)
+                track.append(elem)
+            else:
+                if typ == 't':
+                    elem = TurnElement(track, endpt)
+                    track.append(elem)
+                else:
+                    elem = LineElement(track, endpt)
+                    track.append(elem)
+        
+        frame = gridEngine(w, h)
+        for i in track:
+            success, grid = frame.check_track(i)
+            if success == True:
+                frame.register_track(grid, i) 
+
+        return tracks, frame
+            
+
+
 
 
 class TrackElement:
