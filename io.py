@@ -4,74 +4,54 @@ They include string writers and buffered readers
 '''
 
 class BufferedReader:
-    def __init__(self, filename) -> None:
-        self.filename = filename
-         
+    def __init__(self) -> None:
+        pass
 
     def next(self):
         pass
 
     def has_next(self) -> bool:
-
-
         pass
 
 
 class TrackReader(BufferedReader):
-    '''
-    This class reads the info that is stored in the track file 
-    to initialize in the joint game-run file
-    '''
-    
     def __init__(self) -> None:
         super().__init__()
-
-    def toread(self, suggest):
-        typ, x, y = np.loadtxt(suggest, delimiter = ',', unpack = True)
-
-        loc = np.zeros(len(x))
-        
-        for i in range(len(x)):
-            loc[i] = [x[i], y[i]]
-
-        return typ, loc
 
 class CarReader(BufferedReader):
     def __init__(self, carfile) -> None:
         super().__init__()
-        self.carlist = self.carread()
         self.carfile = carfile
 
-    def carread(self):
+        self.carloc = self.toRead()
+    
+    def toRead(self):
+        
         def isint(val):
-
-            try:
-                int(val)
-                return True
+            try: 
+                vals = int(val)
             except ValueError:
                 return False
+            return True
 
-        f = open('suggest.txt', 'r')
+        f = open(self.carfile, 'r'):
 
+        carloc = []
+        
         line = f.readline()
-
-        line = line.split(", ")
-
-        final = []
-
-        for i in line:
+        
+        line1 = line.split(', ')
+        
+        for i in line1:
             if isint(i) == False:
-                final.append(i)
+                carloc.append(i)
             else:
-                temp = final[-1]
-
+                temp = carloc[-1]
                 for j in range(int(i) - 1):
-                    final.append(temp)
+                    carloc.append(temp)
+                    
+        return carloc
 
-        return final
-
-
-    
 
         
 class TrackWriter:
@@ -84,23 +64,21 @@ class TrackWriter:
         '''
         self.elems = elems
     
-    def write(self, suggest):
+    def write(self, suggest, w, h):
         '''
         suggests the name. Returns false if there's a file with that name (so then it overwrites on a cache file?)
         '''
         f = open(suggest, 'w')
 
-        f.write('\n')
-
-        for i in self.elems:
-            p = str(i)
-            f.write(p)
-
+        f.write(str(w), str(h) + '\n')
         
+        for i in self.elems:
+            f.write(str(i) + '\n')
+
         f.close()
 
         return None
 
 
-
+        
         
