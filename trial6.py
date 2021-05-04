@@ -11,19 +11,19 @@ from car import *
 
 window = pyglet.window.Window(960, 540)
 batch = pyglet.graphics.Batch()
-move = Thing([100, 100], [30, 20], batch)
+move = Thing([100, 100], [30, 20])
 keys = []
-friction = 2
 
-def update_frame(x, y):
+
+def update_frame(dt):
     global move
     global batch
     global friction
-    dt = 1./10
     inp = create_input(keys)
-    move.register_control(inp, friction, dt)
-    move.calc_render_args(batch)
-    batch.draw()
+    move.register_control(inp, dt)
+    #move.update()
+    move.render(batch)
+    #batch.draw()
 
 def give_conv(symbol):
     ref = [key.W, key.A, key.S, key.D]
@@ -67,5 +67,6 @@ def on_draw():
     window.clear()
     batch.draw()
 
-pyglet.clock.schedule(update_frame, 1/10.0)
+#pyglet.clock.schedule(update_frame, 1./30)
+pyglet.clock.schedule_interval(update_frame, 1/60.0)
 pyglet.app.run()

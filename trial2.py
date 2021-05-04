@@ -21,6 +21,14 @@ arc2 = shapes.Arc(100, 0, 100, segments=200, angle=np.pi/2, color=(255, 255, 0),
 arc2.rotation = -90
 line2 = shapes.Line(100, 100, 200, 100, batch=batch)
 
+
+batch = None
+batch = pyglet.graphics.Batch()
+use = []
+use.append(shapes.Line(102.90992868092131, 99.82023606604348, 98.4720065613695, 97.51701066222545, batch=batch))
+use.append(shapes.Line(101.5279934386305, 102.48298933777455, 97.09007131907869, 100.17976393395652, batch=batch))
+use.append(shapes.Line(102.90992868092131, 99.82023606604348, 101.5279934386305, 102.48298933777455, batch=batch))
+use.append(shapes.Line(98.4720065613695, 97.51701066222545, 97.09007131907869, 100.17976393395652, batch=batch))
 frame = 0
 def update_frame(x, y):
     global frame
@@ -121,4 +129,4 @@ def do_thing2(x1, y1, x2, y2, batch):
         arc7.rotation = rotate
     
 pyglet.clock.schedule(update_frame, 1/10.0)
-pyglet.app.run()
+pyglet.app.run() 
