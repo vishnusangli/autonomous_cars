@@ -9,6 +9,7 @@ class Master_Handler:
         '''
         Reads and initializes the track
         '''
+        
         self.track = Track(filename)
         self.agents = [] #will be in terms of lists - [agent, inp_func]
         self.agents_alive = []
@@ -16,15 +17,19 @@ class Master_Handler:
         self.window = None
 
 
-    def add_agent(self, inp_func, pos, dims, agent_class = Thing, updatewin = False):
+    def add_agent(self, inp_func, dims, agent_class = Thing, updatewin = False):
         '''
         Adds a new agent
         '''
-        new_agent = agent_class(pos, dims, init_angle = self.track.startAngle())
+
+        a, b= self.track.startAngle()
+
+        new_agent = agent_class(b.givePos(), dims, init_angle = a)
         self.agents.append([new_agent, inp_func])
         self.agents_alive.append(True)
         if updatewin:
             self.window.agents = [elem[0] for elem in self.agents]
+        return b
 
     def control_agents(self):
         '''
@@ -38,13 +43,19 @@ class Master_Handler:
                 val = self.track.checkCollision(pair[0].funcs)
                 print(val, self.agents[0][0].centre)
                 self.agents_alive[num] = not val
+                angles = [0, 0.25*np.pi, 0.5*np.pi, 0.75*np.pi, np.pi]
+                lines = self.track.lineof_sight(pair[0].centre, angles)
 
     
     def master_update(self, dt):
+
         #print("Running")
         self.control_agents()
         if self.window != None: #Part for rendering
             self.window.update(dt)
+
+
+        
     
     def window_setup(self):
         self.window = render.main(self.track, [elem[0] for elem in self.agents])
@@ -67,7 +78,7 @@ class Master_Handler:
 x = Master_Handler('tracks/first.txt')
 print("Done")
 x.window_setup()
-x.add_agent(x.window.give_input, [100, 100], [5, 3], updatewin = True)
+centrepoint = x.add_agent(x.window.give_input, [8, 5], updatewin = True)
 #print(x.agents[0][0].funcs)
 x.start_render()
 print("Done")

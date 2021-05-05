@@ -34,9 +34,9 @@ currelem_save = [] #pair of coordinates
 currelem_obj = [] #The current track elem render objs
 x_fac = np.divide(500, 960)
 y_fac = np.divide(500, 540)
-#err_list = []
+err_list = []
 
-#engine = gridEngine(*world_dims)
+engine = gridEngine(*world_dims)
 batch = pyglet.graphics.Batch()
 
 print('starting now')
@@ -148,7 +148,7 @@ def draw_turnElem( x, y, min_rad = 10):
     global currelem_obj
     global batch
 
-    #global err_list
+    global err_list
 
     global grid
     global pot_grids
@@ -156,9 +156,9 @@ def draw_turnElem( x, y, min_rad = 10):
     stuff = circCalc(render_elems[-1].endPoint, Point(x, y))
     if stuff != None and stuff[1] >= 2 * trackWidth:
         #print(stuff)
-        #err_list = [render_elems[-1].endPoint, [x, y]]
+        err_list = [render_elems[-1].endPoint, [x, y]]
         val = TurnElement(render_elems[-1], Point(x, y))
-        #success, grids = grid.check_track(val)
+        success, grids = grid.check_track(val)
         success, grids = True, []
         #print(success, x, y)
         if success:
@@ -183,7 +183,7 @@ def draw_lineElem( x, y, min_length = 1):
     y = start.yPos + delt_y
 
     val = LineElement(render_elems[-1], Point(x, y))
-    #success, grids = grid.check_track(val)
+    success, grids = grid.check_track(val)
     success, grids = True, []
     #print(success, x, y)
     if success:
@@ -204,4 +204,4 @@ finally:
     if x == "y":
         w = TrackWriter(save_elems)
         w.write('tracks/first.txt', 960, 540)
-    #print("Final error list: ", err_list)
+    print("Final error list: ", err_list)

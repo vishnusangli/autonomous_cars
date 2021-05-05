@@ -48,17 +48,21 @@ class Track:
         Currently it returns the points themselves, should consider returning merely distance
         However, the distance lines cannot be shown then
         '''
-        sight_dict = {}
+        sight_list = []
         ref = centre.dirVec
         for a in angles:
             end = angledpoint_end(centre, (a - np.pi/2) + ref, max_sight)
             f = math_func([centre.xPos, centre.yPos, end.xPos, end.yPos], True)
             success, pot, _ = self.engine.grid_search(f, [centre.xPos, end.xPos])
             if success:
-                sight_dict[a] = Point(pot, f(pot))
+                endLoc = Point(*pot)
+                dist = centre.distance(endLoc)
+                sight_list.append(dist)
             else:
-                sight_dict[a] = end
-        return sight_dict
+                sight_list.append(max_sight)
+
+        print (sight_list)
+        return sight_list
     
     def TrackReader(self):
         f = open(self.filename, 'r')
@@ -98,7 +102,8 @@ class Track:
 
     def startAngle(self):
         ang = self.tracks[0].startPoint
-        return ang.dirVec
+        
+        return ang.dirVec, angledpoint_end(ang, ang.dirVec, 5)
             
 
 
