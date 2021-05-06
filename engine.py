@@ -29,7 +29,6 @@ class Master_Handler:
         self.agents_alive.append(True)
         if updatewin:
             self.window.agents = [elem[0] for elem in self.agents]
-        return b
 
     def control_agents(self):
         '''
@@ -44,8 +43,7 @@ class Master_Handler:
                 print(val, self.agents[0][0].centre)
                 self.agents_alive[num] = not val
                 angles = [0, 0.25*np.pi, 0.5*np.pi, 0.75*np.pi, np.pi]
-                lines = self.track.lineof_sight(pair[0].centre, angles)
-
+                
     
     def master_update(self, dt):
 
@@ -78,7 +76,12 @@ class Master_Handler:
 x = Master_Handler('tracks/first.txt')
 print("Done")
 x.window_setup()
-centrepoint = x.add_agent(x.window.give_input, [8, 5], updatewin = True)
+x.add_agent(x.window.give_input, [8, 5], updatewin = True)
 #print(x.agents[0][0].funcs)
 x.start_render()
 print("Done")
+x.wipe()
+x.window_setup()
+x.add_agent(x.window.give_input, [8, 5], updatewin = True)
+#print(x.agents[0][0].funcs)
+x.start_render()

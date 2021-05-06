@@ -31,6 +31,8 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         self.funcs = self.create_funcs()
         self.speed = init_speed
         self.steer = 0
+
+
         
         #self.prev_orientation = np.pi/2 #render orientation
 
@@ -159,6 +161,7 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         kind of a fun thing, but wast of time
         '''
         pass
+    
         
 
 

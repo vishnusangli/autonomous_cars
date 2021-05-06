@@ -17,6 +17,9 @@ class Track:
     #Relative dimensions of the world, which would be later scaled for the display
     
     wireFrame = True
+    angles = [0, np.pi/4, np.pi/2, 0.75 * np.pi, np.pi, -0.75 * np.pi, - 0.5 * np.pi, -0.25 * np.pi]
+    max_sight = 20
+
 
     def __init__(self, filename) -> None:
         '''
@@ -42,7 +45,7 @@ class Track:
                 return True
         return False
 
-    def lineof_sight(self, centre, angles, max_sight = 20):
+    def lineof_sight(self, centre):
         '''
         Takes in a list of angles with respect to obj and returns a dictionary of endPoints
         Currently it returns the points themselves, should consider returning merely distance
@@ -50,8 +53,8 @@ class Track:
         '''
         sight_list = []
         ref = centre.dirVec
-        for a in angles:
-            end = angledpoint_end(centre, (a - np.pi/2) + ref, max_sight)
+        for a in self.angles:
+            end = angledpoint_end(centre, (a - np.pi/2) + ref, self.max_sight)
             f = math_func([centre.xPos, centre.yPos, end.xPos, end.yPos], True)
             success, pot, _ = self.engine.grid_search(f, [centre.xPos, end.xPos])
             if success:
@@ -59,9 +62,9 @@ class Track:
                 dist = centre.distance(endLoc)
                 sight_list.append(dist)
             else:
-                sight_list.append(max_sight)
+                sight_list.append(self.max_sight)
 
-        print (sight_list)
+        #print (sight_list)
         return sight_list
     
     def TrackReader(self):
@@ -104,7 +107,28 @@ class Track:
         ang = self.tracks[0].startPoint
         
         return ang.dirVec, angledpoint_end(ang, ang.dirVec, 5)
-            
+    
+    def give_stuff(self, agent, dt):
+        '''
+        Gives scaled line of sight and speed to DQNAgent
+         Rewards based on speed, collision
+        Speed is scaled between -100 and 0
+        collision penalty is 200
+        '''
+        vals = self.lineof_sight(agent.centre)
+        vals.append(np.divide(agent.speed - agent.speed_range[0], agent.speed_range[1] - agent.speed_range[0]))
+
+        if self.checkCollision(agent.funcs):
+            return np.array(vals), -200, True #Collision penatly
+        else:
+            reward = np.divide(vals[-1] * 100, dt)
+            return np.array(vals), reward, False
+        
+
+
+
+
+
 
 
 
