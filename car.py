@@ -32,7 +32,7 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         self.speed = init_speed
         self.steer = 0
 
-
+        self.dist_travelled = 0
         
         #self.prev_orientation = np.pi/2 #render orientation
 
@@ -101,6 +101,7 @@ class Thing: #Most basic controllable car, a rectangle without wheels
 
         self.centre.xPos += delt_x
         self.centre.yPos += delt_y
+        self.dist_travelled += np.sqrt((delt_x**2) + (delt_y**2))
         #print(self.centre)
         self.funcs = self.create_funcs()
     

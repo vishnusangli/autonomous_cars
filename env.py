@@ -18,7 +18,7 @@ class Track:
     
     wireFrame = True
     angles = [0, np.pi/4, np.pi/2, 0.75 * np.pi, np.pi, -0.75 * np.pi, - 0.5 * np.pi, -0.25 * np.pi]
-    max_sight = 20
+    max_sight = 100
     pos_actions = [[1, 0, 0, 0], [0, 0, 1, 0], [1, 1, 0, 0], [1, 0, 0, 1], [0, 1, 1, 0], [0, 0, 1, 1], [0, 1, 0, 0], [0, 0, 0, 1]]
 
 
@@ -130,7 +130,7 @@ class Track:
         if collide:
             return -400
         
-        val = np.divide(agent.speed - (agent.speed_range[1]/2), agent.speed_range[1]) * np.divide(dt, 60) 
+        val = np.divide(agent.speed - (agent.speed_range[1]/2), agent.speed_range[1]) * np.divide(dt, 20)  * 400
         return val
         
     def convert_DQNaction(self, control):
@@ -371,7 +371,10 @@ class gridEngine:
         #x, y are not integers, it's shitting over everything
         #print(x, y)
         if 0 <= x < self.width and 0 < y < self.height:
-            to_return = self.grid[int(x//self.factor)][int(y//self.factor)]
+            try:
+                to_return = self.grid[int(x//self.factor)][int(y//self.factor)]
+            except Exception as e:
+                return []
             return to_return
         return []
 

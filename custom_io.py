@@ -4,7 +4,7 @@ They include string writers and buffered readers
 '''
 
 from os import error
-
+import numpy as np
 
 class BufferedReader:
     def __init__(self) -> None:
@@ -143,4 +143,20 @@ class CarWriter:
         f.write(self.save_str)
         f.close()
         
-        
+def write_stats(vals, suggest):
+    f = open(suggest, 'w')
+    for elem in range(len(vals[0])):
+       for thing in vals:
+           f.write(f"{thing[elem]} ")
+       f.write("\n")
+    f.close() 
+
+def read_stats(suggest):
+    f = open(suggest, 'r')
+    main = []
+    for line in f:
+        line = line.strip().split()
+
+        newline = [float(a) for a in line]
+        main.append(newline)
+    return np.matrix(main)

@@ -44,12 +44,14 @@ class Master_Handler:
                 pair = self.agents[num]
                 # do the newstate, reward, done -- here
                 con = pair[1]()
-                print(con, self.trials_left)
+                #print(con, self.trials_left)
                 pair[0].register_control(con, self.dt)
                 state, reward, done = self.track.give_stuff(pair[0], self.dt)
+                print(state)
+                #print(reward, pair[0].dist_travelled)
                 #print(state)
                 #print(val, self.agents[0][0].centre)
-                #self.agents_alive[num] = not done
+                self.agents_alive[num] = not done
                 
     def master_update(self, dt):
 
@@ -93,14 +95,17 @@ class Master_Handler:
     
     def step(self, control):
         #print(self.trials_left)
+        if not self.agents_alive[0]:
+            state, reward, done = self.track.give_stuff(self.first, self.dt)
+            return state, reward, True
         self.trials_left -= 1
         self.first.register_control(self.track.convert_DQNaction(control), self.dt)
         state, reward, done = self.track.give_stuff(self.first, self.dt)
         self.agents_alive[0] = not done
         done = True if self.trials_left == 0 else done
         if done:
-            print(f"Finished with {self.trials_left} frames left, last reward: {reward}")
-        return state, reward, done
+            print(f"Finished with {self.trials_left} frames left, last reward: {reward}, distance: {self.first.dist_travelled}")
+        return state, reward, done, self.first.dist_travelled
 
 
 # x = Master_Handler('tracks/first.txt')

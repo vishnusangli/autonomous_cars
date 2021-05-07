@@ -36,7 +36,7 @@ x_fac = np.divide(500, 960)
 y_fac = np.divide(500, 540)
 err_list = []
 
-engine = gridEngine(*world_dims)
+engine = gridEngine(960, 540)
 batch = pyglet.graphics.Batch()
 
 print('starting now')
@@ -203,5 +203,5 @@ finally:
     x = input("Write?")
     if x == "y":
         w = TrackWriter(save_elems)
-        w.write('tracks/first.txt', 960, 540)
+        w.write('tracks/second.txt', 960, 540)
     print("Final error list: ", err_list)

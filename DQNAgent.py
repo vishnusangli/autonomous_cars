@@ -2,7 +2,7 @@
 
 #from tensorflow.python.keras.callbacks import TensorBoard
 from tensorflow.keras.callbacks import TensorBoard
-from custom_io import CarWriter
+from custom_io import CarWriter, write_stats
 import numpy as np
 #import keras.backend.tensorflow_backend as backend
 
@@ -46,9 +46,9 @@ MODEL_NAME = '1x9'
 MEMORY_FRACTION = 0.20
 PREDICTION_BATCH_SIZE = 1
 TRAINING_BATCH_SIZE = MINIBATCH_SIZE // 4
-TRIAL_NUM = "trial4"
+TRIAL_NUM = "trial7"
 # Environment settings
-EPISODES = 400
+EPISODES = 300
 
 # Exploration settings
 epsilon = 1.0 # not a constant, going to be decayed
@@ -135,7 +135,7 @@ class DQNAgent:
 
         model.add(Dense(9, input_shape = (1, 9)))
         model.add(Flatten())
-        model.add(Dense(8))
+        model.add(Dense(8, activation = 'linear'))
         model.add(Dense(8))
         
         model.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=["accuracy"])
@@ -270,7 +270,7 @@ if __name__ == '__main__':
     # Create agent and environment
     
     agent = DQNAgent()
-    env = Master_Handler(filename = 'tracks/first.txt', dt = DT)
+    env = Master_Handler(filename = 'tracks/second.txt', dt = DT)
 
 
     tf.compat.v1.global_variables_initializer()
@@ -288,6 +288,8 @@ if __name__ == '__main__':
     writer = CarWriter()
     write = True
     write_reward_max = -200
+    write_dist_max = 0
+    stats = [[], [], []] #epsilon, reward, distance
     # Iterate over episodes
     for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
         #if episode == EPISODES:
@@ -325,7 +327,7 @@ if __name__ == '__main__':
                     # This takes no time, so we add a delay matching 60 FPS (prediction above takes longer)
                     #time.sleep(DT)
                 try:
-                    new_state, reward, done = env.step(action)
+                    new_state, reward, done, dist = env.step(action)
                     #print(new_state, reward, done)
                     if not new_state.shape == (1, 1, 9):
                         print("State array got reshaped")
@@ -368,17 +370,26 @@ if __name__ == '__main__':
             if epsilon > MIN_EPSILON:
                 epsilon *= EPSILON_DECAY
                 epsilon = max(MIN_EPSILON, epsilon)
+
             if episode_reward > max_reward:
-                writer.write(f'cardir/{MODEL_NAME}-{TRIAL_NUM}/{episode}-{int(episode_reward)}.txt')
+                writer.write(f'cardir/{MODEL_NAME}-{TRIAL_NUM}/{episode}-{int(episode_reward)}-{int(dist)}.txt')
                 writer = CarWriter()
                 max_reward = episode_reward
                 print(f"New Max Reward: {max_reward}")
+            if dist >  write_dist_max:
+                write_dist_max = dist
+                print(f"New Max Distance: {dist}")
+                if episode_reward != max_reward:
+                    writer.write(f'cardir/{MODEL_NAME}-{TRIAL_NUM}/{episode}-{int(episode_reward)}-{int(dist)}.txt')
+            stats[0].append(epsilon)
+            stats[1].append(episode_reward)
+            stats[2].append(dist)
         except Exception as e:
             print("Second Point Error", e)
             break
-        
-        
-            #riter = CarWriter
+
+    write_stats(stats, f'stats/{MODEL_NAME}-{TRIAL_NUM}-{episode}-{int(episode_reward)}-{int(dist)}.txt')
+        #riter = CarWriter
 
 
 
