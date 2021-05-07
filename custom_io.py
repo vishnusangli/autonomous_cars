@@ -3,6 +3,9 @@ This file handles file reading and writing
 They include string writers and buffered readers
 '''
 
+from os import error
+
+
 class BufferedReader:
     def __init__(self) -> None:
         pass
@@ -18,39 +21,73 @@ class TrackReader(BufferedReader):
     def __init__(self) -> None:
         super().__init__()
 
-class CarReader(BufferedReader):
+class CarReader:
+    inp_dict = ['w', 'a', 's', 'd']
     def __init__(self, carfile) -> None:
-        super().__init__()
+        #print("WHAT")
         self.carfile = carfile
+        self.read_str = self.toRead()
+        self.curr_counter = 0
+        self.curr_act = [0, 0, 0, 0]
+        self.currelem = 0
+        self.done = False
 
-        self.carloc = self.toRead()
+    def isint(self, val):
+        try: 
+            vals = int(val)
+        except ValueError:
+            return False
+        return True
     
     def toRead(self):
-        
-        def isint(val):
-            try: 
-                vals = int(val)
-            except ValueError:
-                return False
-            return True
-
         f = open(self.carfile, 'r')
-
-        carloc = []
         
         line = f.readline()
+        return line
+
+    def givechar(self, elem):
+        return self.read_str[elem]
         
-        line1 = line.split(', ')
+    def next(self):
+        #print("WHAT")
+        if self.done:
+            return self.curr_act
+        #print(self.currelem, self.givechar(self.currelem))
+        if self.curr_counter == 0:
+            com_val = ""
+            while not self.isint(self.givechar(self.currelem)):
+                com_val += self.givechar(self.currelem)
+                #print("Command", self.givechar(self.currelem))
+                self.currelem += 1
+            num_val = ""
+            while self.isint(self.givechar(self.currelem)):
+                num_val += self.givechar(self.currelem)
+                #print("Counter", self.givechar(self.currelem))
+                self.currelem += 1
+            
+            self.curr_act = self.convert_inp(com_val)
+            try:
+                self.curr_counter = int(num_val)
+            except ValueError as e:
+                print("Screwed Up")
+                print(e)
+        self.curr_counter -= 1
+
+        if self.currelem == len(self.read_str):
+            self.done = True
+            self.curr_act = [0, 0, 0, 0]
+
+        return self.curr_act
+    
+    def convert_inp(self, inp):
+        new_inp = [0, 0, 0, 0]
+        for char in inp:
+            elem = self.inp_dict.index(char)
+            new_inp[elem] = 1
+        return new_inp
+
+
         
-        for i in line1:
-            if isint(i) == False:
-                carloc.append(i)
-            else:
-                temp = carloc[-1]
-                for j in range(int(i) - 1):
-                    carloc.append(temp)
-                    
-        return carloc
 
 
         
@@ -79,7 +116,31 @@ class TrackWriter:
             f.write("\n")        
         f.close()
 
+class CarWriter:
+    conv = ['w', 's', 'wa', 'wd', 'sa', 'sd', 'a', 'd']
+    def __init__(self) -> None:
+        self.save_str = ""
+        self.curr_ac = ""
+        self.curr_t = 0
 
 
+    def next_step(self, control):
+        curr = self.conv[control]
+        if curr != self.curr_ac:
+            self.reg_curr()
+            self.curr_ac = curr
+
+        self.curr_t += 1
+    
+    def reg_curr(self):
+        if self.curr_ac != "" and self.curr_t > 0:
+            self.save_str += self.curr_ac + str(int(self.curr_t))
+        self.curr_ac = ""
+        self.curr_t = 0
+
+    def write(self, suggest):
+        f = open(suggest, 'w')
+        f.write(self.save_str)
+        f.close()
         
         

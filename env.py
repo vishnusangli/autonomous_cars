@@ -61,12 +61,12 @@ class Track:
             if success:
                 endLoc = Point(*pot)
                 dist = centre.distance(endLoc)
-                sight_list.append(dist)
+                sight_list.append(dist/self.max_sight)
             else:
-                sight_list.append(self.max_sight)
+                sight_list.append(1)
 
         #print (sight_list)
-        return [[sight_list]]
+        return sight_list
     
     def TrackReader(self):
         f = open(self.filename, 'r')
@@ -118,12 +118,12 @@ class Track:
         '''
         vals = self.lineof_sight(agent.centre)
         vals.append(np.divide(agent.speed - agent.speed_range[0], agent.speed_range[1] - agent.speed_range[0]))
-
+        
         if self.checkCollision(agent.funcs):
-            return np.array(vals), -200, True #Collision penatly
+            return np.array([[vals]]), -200, True #Collision penatly
         else:
-            reward = np.divide(vals[-1] * 100, dt)
-            return np.array(vals), reward, False
+            reward = np.divide(agent.speed * 100 * dt, 60 * agent.speed_range[1])
+            return np.array([[vals]]), reward, False
         
     def convert_DQNaction(self, control):
         '''

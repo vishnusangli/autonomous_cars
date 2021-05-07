@@ -1,3 +1,4 @@
+from custom_io import CarReader
 import pyglet
 import numpy as np
 from env import *
@@ -15,11 +16,12 @@ class Master_Handler:
         self.agents_alive = []
         self.dt = dt
         self.window = None
-        self.trials_left = np.divide(60, dt) #60 seconds
+        self.time = 10
+        self.trials_left = np.divide(self.time, dt) #60 seconds
         self.first = None
 
 
-    def add_agent(self, inp_func, dims, agent_class = Thing, updatewin = False):
+    def add_agent(self, inp_func, dims, agent_class = Thing):
         '''
         Adds a new agent
         '''
@@ -29,8 +31,7 @@ class Master_Handler:
         new_agent = agent_class(b.givePos(), dims, init_angle = a)
         self.agents.append([new_agent, inp_func])
         self.agents_alive.append(True)
-        if updatewin:
-            self.window.agents = [elem[0] for elem in self.agents]
+
 
     def control_agents(self):
         '''
@@ -44,6 +45,7 @@ class Master_Handler:
                 # do the newstate, reward, done -- here
                 pair[0].register_control(pair[1](), self.dt)
                 state, reward, done = self.track.give_stuff(pair[0], self.dt)
+                #print(state)
                 #print(val, self.agents[0][0].centre)
                 self.agents_alive[num] = not done
                 
@@ -62,6 +64,7 @@ class Master_Handler:
         self.window = render.main(self.track, [elem[0] for elem in self.agents])
     
     def start_render(self):
+        self.window.agents = [elem[0] for elem in self.agents]
         self.window.run(self.master_update, self.dt)
 
     def wipe(self):
@@ -71,6 +74,7 @@ class Master_Handler:
         '''
         self.agents = []
         self.agents_alive = []
+        self.trials_left = np.divide(self.time, self.dt) #60 seconds
         if self.window != None:
             self.window.close()
         self.window = None
@@ -86,12 +90,14 @@ class Master_Handler:
         return self.track.give_stuff(self.first, self.dt)
     
     def step(self, control):
+        #print(self.trials_left)
         self.trials_left -= 1
         self.first.register_control(self.track.convert_DQNaction(control), self.dt)
         state, reward, done = self.track.give_stuff(self.first, self.dt)
         self.agents_alive[0] = not done
-        if self.trials_left == 0:
-            done = True
+        done = True if self.trials_left == 0 else done
+        if done:
+            print(f"Finished with {self.trials_left} frames left, last reward: {reward}")
         return state, reward, done
 
 
@@ -103,3 +109,22 @@ class Master_Handler:
 # x.start_render()
 # print("Done")
 # x.wipe()
+
+def display_main(track = 'tracks/first.txt', cons = ["key"]):
+    main = Master_Handler(track)
+    main.window_setup()
+    for elem in cons:
+        try:
+            if elem == "key":
+                main.add_agent(main.window.give_input, [8, 5])
+            else:
+                read = CarReader(elem)
+                main.add_agent(read.next, [8, 5])
+            print(f"Successfully added Agent: {elem}")
+        except Error as e:
+            print(f"Failed to add Agent: {elem}")
+    main.start_render()
+    main.wipe()
+
+#display_main()        
+

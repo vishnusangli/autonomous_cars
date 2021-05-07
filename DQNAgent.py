@@ -1,11 +1,14 @@
 #Adapted from Pythonprogramming.net
 
+from tensorflow.python.keras.callbacks import TensorBoard
+from custom_io import CarWriter
 import numpy as np
 #import keras.backend.tensorflow_backend as backend
 from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from tensorflow.keras.optimizers import Adam
-from keras.callbacks import TensorBoard
+from keras.callbacks import TensorBoard  #tf1 Tensorboard
+
 import tensorflow as tf
 from collections import deque
 import time
@@ -14,15 +17,18 @@ from tensorflow.python.keras.layers.convolutional import Conv1D
 from tqdm import tqdm
 import os
 from threading import Thread
+import sys
+
 
 from tensorflow.python.keras.backend import set_session
-
+#from tensorflow.compat.v1.keras.callbacks import TensorBoard # tf1 Tensorboard 
 
 
 
 from engine import *
 
 tf.compat.v1.disable_eager_execution()
+
 #tf.compat.v1.reset_default_graph()
 
 print("Checkpoint 1")
@@ -34,11 +40,11 @@ UPDATE_TARGET_EVERY = 5  # Terminal states (end of episodes)
 MODEL_NAME = '1x9'
 #MIN_REWARD = -200  # For model save
 MEMORY_FRACTION = 0.20
-PREDICTION_BATCH_SIZE = 10
-TRAINING_BATCH_SIZE = 20
+PREDICTION_BATCH_SIZE = 1
+TRAINING_BATCH_SIZE = MINIBATCH_SIZE // 4
 
 # Environment settings
-EPISODES = 20_000
+EPISODES = 200
 
 # Exploration settings
 epsilon = 1  # not a constant, going to be decayed
@@ -56,7 +62,8 @@ class ModifiedTensorBoard(TensorBoard):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.step = 1
-        self.writer = tf.summary.create_file_writer(self.log_dir) ##############################################
+        #self.writer = tf.summary.create_file_writer(self.log_dir) ##############################################
+        self.writer = tf.compat.v1.summary.FileWriter(self.log_dir)
         #tf.summary.
     # Overriding this method to stop creating default log writer
     def set_model(self, model):
@@ -81,12 +88,24 @@ class ModifiedTensorBoard(TensorBoard):
     def update_stats(self, **stats):
         self._write_logs(stats, self.step)
 
+    def _write_logs(self, logs, index):
+        for name, value in logs.items():
+            if name in ['batch', 'size']:
+                continue
+            summary = tf.compat.v1.Summary()
+            summary_value = summary.value.add()
+            summary_value.simple_value = value
+            summary_value.tag = name
+            self.writer.add_summary(summary, index)
+        self.writer.flush()
 
 # Agent class
 class DQNAgent:
     def __init__(self):
 
         # Main model
+        self.sess = tf.compat.v1.Session()
+        set_session(self.sess)
         self.model = self.create_model()
 
         # Target network
@@ -129,6 +148,10 @@ class DQNAgent:
         minibatch = random.sample(self.replay_memory, MINIBATCH_SIZE)
 
         current_states = np.array([transition[0] for transition in minibatch])
+        #print(minibatch)
+        #print(current_states)
+        #print(current_states.shape)
+
         with self.graph.as_default():
             current_qs_list = self.model.predict(current_states, PREDICTION_BATCH_SIZE)
 
@@ -172,20 +195,24 @@ class DQNAgent:
         return self.model.predict(state)[0]
 
     def train_in_loop(self):
-    
         print("LOAD")
+        
         X = np.random.uniform(size=(1, 1, 9)).astype(np.float32)
         y = np.random.uniform(size=(1, 8)).astype(np.float32)
-        #with tf.compat.v1.Session() as SESS:
-        with self.graph.as_default(): ##############################################
 
-            self.model.fit(X,y, verbose=True, batch_size=1)
+
+        with self.graph.as_default(): ##############################################
+            set_session(self.sess)
+            try:
+                self.model.fit(X,y, verbose=False, batch_size=1)
+            except Exception as e:
+                print(e)
         self.training_initialized = True
 
         while True:
             if self.terminate:
                 return
-            self.train()
+            self.train(None, None)
             time.sleep(0.01)
 
 if __name__ == '__main__':
@@ -208,10 +235,12 @@ if __name__ == '__main__':
     
 
     # Create agent and environment
+    
     agent = DQNAgent()
     env = Master_Handler(filename = 'tracks/first.txt', dt = DT)
 
 
+    tf.compat.v1.global_variables_initializer()
     # Start training thread and wait for training to be initialized
     trainer_thread = Thread(target=agent.train_in_loop, daemon=True)
     trainer_thread.start()
@@ -221,11 +250,17 @@ if __name__ == '__main__':
     print("SUCCESS STARTING")
     # Initialize predictions - forst prediction takes longer as of initialization that has to be done
     # It's better to do a first prediction then before we start iterating over episode steps
-    agent.get_qs(np.ones(STATE_SHAPE))
+    agent.get_qs(np.ones((1, 1, 9)))
+
+    writer = CarWriter()
+    write = False
 
     # Iterate over episodes
     for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
-        print(f"Episode: {episode}")
+        #if episode == EPISODES:
+            #write = True
+
+        #print(f"Episode: {episode}")
         try:
 
             #env.collision_hist = []
@@ -238,7 +273,7 @@ if __name__ == '__main__':
             step = 1
 
             # Reset environment and get initial state
-            current_state = env.reset()
+            current_state, reward, done = env.reset()
 
             # Reset flag and start iterating until episode ends
             done = False
@@ -255,22 +290,32 @@ if __name__ == '__main__':
                     # Get random action
                     action = np.random.randint(0, 8)
                     # This takes no time, so we add a delay matching 60 FPS (prediction above takes longer)
-                    time.sleep(DT)
-
-                new_state, reward, done, _ = env.step(action)
+                    #time.sleep(DT)
+                try:
+                    new_state, reward, done = env.step(action)
+                    #print(new_state, reward, done)
+                    if not new_state.shape == (1, 1, 9):
+                        print("State array got reshaped")
+                    #sys.exit(1)
+                except Exception as e:
+                    print("First Point Error: ", e)
+                    sys.exit(1)
+                    break
+                if write:
+                    writer.next_step(action)
 
                 # Transform new continous state to new discrete state and count reward
                 episode_reward += reward
 
                 # Every step we update replay memory
-                agent.update_replay_memory((current_state, action, reward, new_state, done))
+                agent.update_replay_memory((current_state.tolist(), action, reward, new_state.tolist(), done))
 
                 current_state = new_state
                 step += 1
 
                 if done:
                     break
-
+                #print("Checkpoint")
             # End of episode - destroy agents
             env.wipe()
 
@@ -291,11 +336,16 @@ if __name__ == '__main__':
                 epsilon *= EPSILON_DECAY
                 epsilon = max(MIN_EPSILON, epsilon)
         except Exception as e:
-            print(e)
+            print("Second Point Error", e)
+            break
+        
+        #if write:
+            #writer.write(f'cardir/{MODEL_NAME}_{"trial1"}_{episode}.txt')
+            #writer = CarWriter
 
 
 
     # Set termination flag for training thread and wait for it to finish
     agent.terminate = True
     trainer_thread.join()
-    agent.model.save(f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
+    agent.model.save(f'models/{MODEL_NAME}__{"trial1"}.model')
