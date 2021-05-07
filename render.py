@@ -17,7 +17,7 @@ class main(pyglet.window.Window):
         self.tracks.render(self.trackBatch) #Only need to run once
 
     
-    def give_input(self):
+    def give_input(self, *args):
         '''
         Groups the pyglet input and gives like this. \\
         Thinking of implementing RL controls like this, common standard.

@@ -19,6 +19,7 @@ class Track:
     wireFrame = True
     angles = [0, np.pi/4, np.pi/2, 0.75 * np.pi, np.pi, -0.75 * np.pi, - 0.5 * np.pi, -0.25 * np.pi]
     max_sight = 20
+    pos_actions = [[1, 0, 0, 0], [0, 0, 1, 0], [1, 1, 0, 0], [1, 0, 0, 1], [0, 1, 1, 0], [0, 0, 1, 1], [0, 1, 0, 0], [0, 0, 0, 1]]
 
 
     def __init__(self, filename) -> None:
@@ -65,7 +66,7 @@ class Track:
                 sight_list.append(self.max_sight)
 
         #print (sight_list)
-        return sight_list
+        return [[sight_list]]
     
     def TrackReader(self):
         f = open(self.filename, 'r')
@@ -74,7 +75,7 @@ class Track:
         line1 = line1.split(', ')
         w = float(line1[0])
         h = float(line1[1])
-        print("startRead")
+        print("Starting Track File Read")
 
         for line in f:
             newline = line.strip().split(", ")
@@ -94,13 +95,13 @@ class Track:
                 else:
                     elem = LineElement(track[-1], endpt)
                     track.append(elem)
-        print("Finisherad")
+        print("Finished Reading")
         frame = gridEngine(w, h)
         for i in track:
             success, grid = frame.check_track(i)
             if success == True:
                 frame.register_track(grid, i) 
-        print("Fingrid")
+        print("GridEngine creation finished")
         return track, frame
 
     def startAngle(self):
@@ -124,6 +125,15 @@ class Track:
             reward = np.divide(vals[-1] * 100, dt)
             return np.array(vals), reward, False
         
+    def convert_DQNaction(self, control):
+        '''
+        DQN Action will be permutations of two separate groups (up, down, nothing) (left, right, nothing)
+        [up, down, up-left, up-right, down-left, down-right, left, right]
+        **Consider whether control is between 1-8 or 0-7
+        '''
+        return self.pos_actions[control]
+        
+
 
 
 

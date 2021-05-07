@@ -5,7 +5,7 @@ from car import *
 import render
 
 class Master_Handler:
-    def __init__(self, filename, dt = 1/10) -> None:
+    def __init__(self, filename = 'tracks/first.txt', dt = 1/10) -> None:
         '''
         Reads and initializes the track
         '''
@@ -15,6 +15,8 @@ class Master_Handler:
         self.agents_alive = []
         self.dt = dt
         self.window = None
+        self.trials_left = np.divide(60, dt) #60 seconds
+        self.first = None
 
 
     def add_agent(self, inp_func, dims, agent_class = Thing, updatewin = False):
@@ -34,20 +36,21 @@ class Master_Handler:
         '''
         Iterates through the agents list and calls on the controls and passes htem on to the agents
         '''
+        if self.trials_left <= 0:
+            self.agents_alive = [False]
         for num in range(len(self.agents_alive)):
             if self.agents_alive[num]:
                 pair = self.agents[num]
                 # do the newstate, reward, done -- here
-                pair[0].register_control(pair[1](), self.dt) 
-                val = self.track.checkCollision(pair[0].funcs)
-                print(val, self.agents[0][0].centre)
-                self.agents_alive[num] = not val
-                angles = [0, 0.25*np.pi, 0.5*np.pi, 0.75*np.pi, np.pi]
+                pair[0].register_control(pair[1](), self.dt)
+                state, reward, done = self.track.give_stuff(pair[0], self.dt)
+                #print(val, self.agents[0][0].centre)
+                self.agents_alive[num] = not done
                 
-    
     def master_update(self, dt):
 
         #print("Running")
+        self.trials_left -= 1
         self.control_agents()
         if self.window != None: #Part for rendering
             self.window.update(dt)
@@ -72,16 +75,31 @@ class Master_Handler:
             self.window.close()
         self.window = None
 
+    '''
+    Single car - DQNAgent training functions
+    '''
+    def reset(self):
+        self.wipe()
+        self.add_agent(None, [8, 5])
+        self.first = self.agents[0][0]
+        self.agents_alive = [True]
+        return self.track.give_stuff(self.first, self.dt)
+    
+    def step(self, control):
+        self.trials_left -= 1
+        self.first.register_control(self.track.convert_DQNaction(control), self.dt)
+        state, reward, done = self.track.give_stuff(self.first, self.dt)
+        self.agents_alive[0] = not done
+        if self.trials_left == 0:
+            done = True
+        return state, reward, done
 
-x = Master_Handler('tracks/first.txt')
-print("Done")
-x.window_setup()
-x.add_agent(x.window.give_input, [8, 5], updatewin = True)
-#print(x.agents[0][0].funcs)
-x.start_render()
-print("Done")
-x.wipe()
-x.window_setup()
-x.add_agent(x.window.give_input, [8, 5], updatewin = True)
-#print(x.agents[0][0].funcs)
-x.start_render()
+
+# x = Master_Handler('tracks/first.txt')
+# print("Done")
+# x.window_setup()
+# x.add_agent(x.window.give_input, [8, 5], updatewin = True)
+# #print(x.agents[0][0].funcs)
+# x.start_render()
+# print("Done")
+# x.wipe()
