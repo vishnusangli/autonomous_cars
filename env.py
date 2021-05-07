@@ -64,7 +64,7 @@ class Track:
             else:
                 sight_list.append(self.max_sight)
 
-        #print (sight_list)
+        print (sight_list)
         return sight_list
     
     def TrackReader(self):

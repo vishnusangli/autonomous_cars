@@ -5,6 +5,8 @@ from pyglet import shapes
 class Thing: #Most basic controllable car, a rectangle without wheels
     speed_range = [-80, 80]
     steer_range = [-np.pi/3, np.pi/3]
+    minspd = 60
+    slprng = np.multiply(50/180, np.pi) 
     acc = 30 #acceleration
     turn_acc = np.pi/4
     friction = 5
@@ -27,13 +29,13 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         self.dims = dims
         self.try_render = None
         self.anchor_add = np.arctan(np.divide(*dims)) + np.pi/2
-        
         self.funcs = self.create_funcs()
         self.speed = init_speed
         self.steer = 0
+        self.val = 0
 
 
-        
+            
         #self.prev_orientation = np.pi/2 #render orientation
 
     def register_control(self, controls, dt):
@@ -46,9 +48,9 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         '''
         self.speed_change(controls, dt)
         if self.speed != 0 : #Can only steer when moving
-            self.regular_turn(controls, dt)
+            self.steering_turn(controls, dt)
         self.apply_friction(dt)
-        self.move(dt)
+        self.move(controls, dt)
     
     def speed_change(self, controls, dt):
         '''
@@ -66,18 +68,19 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         Holding steering keys only turns the object's orientation
         Constant angular rate of change
         '''
-        delt_turn = np.multiply(self.turn_rate, dt) * (controls[1] - controls[3]) #no turn if both are pressed
-        self.centre.dirVec = rad_reduce(self.centre.dirVec + delt_turn)
+        self.delt_turn = np.multiply(self.turn_rate, dt) * (controls[1] - controls[3]) #no turn if both are pressed
+        self.centre.dirVec = rad_reduce(self.centre.dirVec + self.delt_turn)
+        
 
     def steering_turn(self, controls, dt):
         '''
         Simulates a form of steering turn
         Holding steering keys changes rate of angular change
         '''
-        delt_steer = np.multiply(self.turn_acc, dt) * (controls[1] - controls[3]) #no change if both are pressed
-        val = self.steer + delt_steer
-        if self.steer_range[0] <= val <= self.steer_range[1]:
-            self.steer = val
+        self.delt_steer = np.multiply(self.turn_acc, dt) * (controls[1] - controls[3]) #no change if both are pressed
+        self.val = self.steer + self.delt_steer
+        if self.steer_range[0] <= self.val <= self.steer_range[1]:
+            self.steer = self.val
         
         delt_turn = np.multiply(self.steer, dt)
         self.centre.dirVec = rad_reduce(self.centre.dirVec + delt_turn)
@@ -92,13 +95,26 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         self.speed = val
 
 
-    def move(self, dt):
+    def move(self, controls, dt):
         '''
         Simplistic moving command that disregards previous momentum (How would our shit change if we begin to include it?)
         '''
-        delt_x = np.multiply(self.speed * np.cos(self.centre.dirVec), dt)
-        delt_y = np.multiply(self.speed * np.sin(self.centre.dirVec), dt)
 
+
+        newAng = self.centre.dirVec
+
+        if self.is_drift():
+            
+            if controls[1] == 1:
+                newAng -= np.pi/2
+            elif controls[3] == 1:
+                newAng += np.pi/2
+            self.speed -= 0.5
+        delt_x = np.multiply(self.speed * np.cos(newAng), dt)
+        delt_y = np.multiply(self.speed * np.sin(newAng), dt)
+
+
+        
         self.centre.xPos += delt_x
         self.centre.yPos += delt_y
         #print(self.centre)
@@ -161,7 +177,17 @@ class Thing: #Most basic controllable car, a rectangle without wheels
         kind of a fun thing, but wast of time
         '''
         pass
+    def is_drift(self):
+
+        if abs(self.speed) >= self.minspd:
+            if abs(self.val) >=  self.slprng:
+                return True
+
+        else:
+            return False
+
     
+
         
 
 
