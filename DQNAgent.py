@@ -1,29 +1,33 @@
 #Adapted from Pythonprogramming.net
 
-from tensorflow.python.keras.callbacks import TensorBoard
+#from tensorflow.python.keras.callbacks import TensorBoard
+from tensorflow.keras.callbacks import TensorBoard
 from custom_io import CarWriter
 import numpy as np
 #import keras.backend.tensorflow_backend as backend
-from keras.models import Sequential
-from keras.layers import Dense, Flatten
-from tensorflow.keras.optimizers import Adam
-from keras.callbacks import TensorBoard  #tf1 Tensorboard
 
+#from keras.models import Sequential
+#from keras.layers import Dense, Flatten
+from tensorflow.keras.optimizers import Adam
+#from keras.callbacks import TensorBoard  #tf1 Tensorboard
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten
 import tensorflow as tf
 from collections import deque
 import time
 import random
-from tensorflow.python.keras.layers.convolutional import Conv1D
+#from tensorflow.python.keras.layers.convolutional import Conv1D
 from tqdm import tqdm
 import os
 from threading import Thread
 import sys
+import traceback
 
 
-from tensorflow.python.keras.backend import set_session
+#from tensorflow.keras.backend import set_session
 #from tensorflow.compat.v1.keras.callbacks import TensorBoard # tf1 Tensorboard 
 
-
+set_session = tf.compat.v1.keras.backend.set_session
 
 from engine import *
 
@@ -42,17 +46,17 @@ MODEL_NAME = '1x9'
 MEMORY_FRACTION = 0.20
 PREDICTION_BATCH_SIZE = 1
 TRAINING_BATCH_SIZE = MINIBATCH_SIZE // 4
-
+TRIAL_NUM = "trial4"
 # Environment settings
-EPISODES = 200
+EPISODES = 400
 
 # Exploration settings
-epsilon = 1  # not a constant, going to be decayed
-EPSILON_DECAY = 0.99975
+epsilon = 1.0 # not a constant, going to be decayed
+EPSILON_DECAY = 0.97
 MIN_EPSILON = 0.001
 
 #  Stats settings
-AGGREGATE_STATS_EVERY = 50  # episodes
+AGGREGATE_STATS_EVERY = 20  # episodes
 DISPLAY = False
 #STATE_SHAPE = (9)
 
@@ -116,7 +120,7 @@ class DQNAgent:
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
 
         # Custom tensorboard object
-        self.tensorboard = ModifiedTensorBoard(log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time())))
+        self.tensorboard = ModifiedTensorBoard(log_dir="logs/{}-{}/{}".format(MODEL_NAME, TRIAL_NUM, int(time.time())))
 
         # Used to count when to update target network with main network's weights
         self.target_update_counter = 0
@@ -126,11 +130,14 @@ class DQNAgent:
         self.training_initialized = False
 
     def create_model(self):
-    
+        
         model = Sequential()
+
         model.add(Dense(9, input_shape = (1, 9)))
         model.add(Flatten())
         model.add(Dense(8))
+        model.add(Dense(8))
+        
         model.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=["accuracy"])
         return model
 
@@ -151,14 +158,30 @@ class DQNAgent:
         #print(minibatch)
         #print(current_states)
         #print(current_states.shape)
-
+        current_qs_list = []
         with self.graph.as_default():
-            current_qs_list = self.model.predict(current_states, PREDICTION_BATCH_SIZE)
+            for index, transition in enumerate(minibatch):
+                set_session(self.sess)
+                try:
+                    current_qs_list.append(self.model.predict([transition[0]], PREDICTION_BATCH_SIZE))
+                except:
+                    traceback.print_exc()
+                    current_qs_list.append(np.random.uniform(size = (1, 8)))
 
-        new_current_states = np.array([transition[3] for transition in minibatch])
+            
+        future_qs_list = []
         with self.graph.as_default():
-            future_qs_list = self.target_model.predict(new_current_states, PREDICTION_BATCH_SIZE)
+            for index, transition in enumerate(minibatch):
+                set_session(self.sess)
+                try:
+                    future_qs_list.append(self.model.predict([transition[3]], PREDICTION_BATCH_SIZE))
+                except:
+                    traceback.print_exc()
+                    future_qs_list.append(np.random.uniform(size = (1, 8)))
 
+        current_qs_list = np.array(current_qs_list)
+        future_qs_list = np.array(future_qs_list)
+        #print(current_qs_list, current_qs_list.shape)
         X = []
         y = []
 
@@ -170,7 +193,7 @@ class DQNAgent:
                 new_q = reward
 
             current_qs = current_qs_list[index]
-            current_qs[action] = new_q
+            current_qs[0][action] = new_q
 
             X.append(current_state)
             y.append(current_qs)
@@ -181,17 +204,24 @@ class DQNAgent:
             self.last_log_episode = self.tensorboard.step
 
         with self.graph.as_default():
-            self.model.fit(np.array(X), np.array(y), batch_size=TRAINING_BATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if log_this_step else None)
-
+            for num in range(len(X)):
+                set_session(self.sess)
+                try:
+                    self.model.fit(np.array(X[num]), np.array(y[num]), batch_size=TRAINING_BATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if log_this_step else None)
+                except:
+                    traceback.print_exc()
 
         if log_this_step:
             self.target_update_counter += 1
 
         if self.target_update_counter > UPDATE_TARGET_EVERY:
-            self.target_model.set_weights(self.model.get_weights())
-            self.target_update_counter = 0
+            with self.graph.as_default():
+                set_session(self.sess)
+                self.target_model.set_weights(self.model.get_weights())
+                self.target_update_counter = 0
 
     def get_qs(self, state):
+        #set_session(self.sess)
         return self.model.predict(state)[0]
 
     def train_in_loop(self):
@@ -212,7 +242,10 @@ class DQNAgent:
         while True:
             if self.terminate:
                 return
-            self.train(None, None)
+            try:
+                self.train(None, None)
+            except:
+                traceback.print_exc()
             time.sleep(0.01)
 
 if __name__ == '__main__':
@@ -253,8 +286,8 @@ if __name__ == '__main__':
     agent.get_qs(np.ones((1, 1, 9)))
 
     writer = CarWriter()
-    write = False
-
+    write = True
+    write_reward_max = -200
     # Iterate over episodes
     for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
         #if episode == EPISODES:
@@ -299,7 +332,7 @@ if __name__ == '__main__':
                     #sys.exit(1)
                 except Exception as e:
                     print("First Point Error: ", e)
-                    sys.exit(1)
+                    #sys.exit(1)
                     break
                 if write:
                     writer.next_step(action)
@@ -335,17 +368,21 @@ if __name__ == '__main__':
             if epsilon > MIN_EPSILON:
                 epsilon *= EPSILON_DECAY
                 epsilon = max(MIN_EPSILON, epsilon)
+            if episode_reward > max_reward:
+                writer.write(f'cardir/{MODEL_NAME}-{TRIAL_NUM}/{episode}-{int(episode_reward)}.txt')
+                writer = CarWriter()
+                max_reward = episode_reward
+                print(f"New Max Reward: {max_reward}")
         except Exception as e:
             print("Second Point Error", e)
             break
         
-        #if write:
-            #writer.write(f'cardir/{MODEL_NAME}_{"trial1"}_{episode}.txt')
-            #writer = CarWriter
+        
+            #riter = CarWriter
 
 
 
     # Set termination flag for training thread and wait for it to finish
     agent.terminate = True
     trainer_thread.join()
-    agent.model.save(f'models/{MODEL_NAME}__{"trial1"}.model')
+    agent.model.save(f'models/{MODEL_NAME}__{TRIAL_NUM}.model')

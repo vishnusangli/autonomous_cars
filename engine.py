@@ -6,7 +6,7 @@ from car import *
 import render
 
 class Master_Handler:
-    def __init__(self, filename = 'tracks/first.txt', dt = 1/10) -> None:
+    def __init__(self, filename = 'tracks/first.txt', dt = 1/20) -> None:
         '''
         Reads and initializes the track
         '''
@@ -43,11 +43,13 @@ class Master_Handler:
             if self.agents_alive[num]:
                 pair = self.agents[num]
                 # do the newstate, reward, done -- here
-                pair[0].register_control(pair[1](), self.dt)
+                con = pair[1]()
+                print(con, self.trials_left)
+                pair[0].register_control(con, self.dt)
                 state, reward, done = self.track.give_stuff(pair[0], self.dt)
                 #print(state)
                 #print(val, self.agents[0][0].centre)
-                self.agents_alive[num] = not done
+                #self.agents_alive[num] = not done
                 
     def master_update(self, dt):
 
@@ -121,10 +123,10 @@ def display_main(track = 'tracks/first.txt', cons = ["key"]):
                 read = CarReader(elem)
                 main.add_agent(read.next, [8, 5])
             print(f"Successfully added Agent: {elem}")
-        except Error as e:
+        except Exception as e:
             print(f"Failed to add Agent: {elem}")
     main.start_render()
     main.wipe()
 
-#display_main()        
+
 

@@ -1,5 +1,3 @@
-from custom_io import *
+from engine import *
 
-read = CarReader('cardir/first.txt')
-for x in range(100):
-    print(read.next())
+display_main(cons = ["cardir/1x9-trial4/2--199.txt"])

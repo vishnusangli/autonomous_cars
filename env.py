@@ -118,12 +118,20 @@ class Track:
         '''
         vals = self.lineof_sight(agent.centre)
         vals.append(np.divide(agent.speed - agent.speed_range[0], agent.speed_range[1] - agent.speed_range[0]))
-        
-        if self.checkCollision(agent.funcs):
+        collide_bool = self.checkCollision(agent.funcs)
+        return np.array([[vals]]), self.reward_func(agent, dt, collide_bool), collide_bool
+        if collide_bool:
             return np.array([[vals]]), -200, True #Collision penatly
         else:
             reward = np.divide(agent.speed * 100 * dt, 60 * agent.speed_range[1])
             return np.array([[vals]]), reward, False
+    
+    def reward_func(self, agent, dt, collide):
+        if collide:
+            return -400
+        
+        val = np.divide(agent.speed - (agent.speed_range[1]/2), agent.speed_range[1]) * np.divide(dt, 60) 
+        return val
         
     def convert_DQNaction(self, control):
         '''
