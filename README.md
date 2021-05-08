@@ -29,7 +29,9 @@ A rectangular car sprite controlled by WASD input.
 - Flatten layer 
 - Dense layer with linear activation
 - Dense(8) output layer
-Model prioritises remaining still over moving although it actively recieves penalty as insufficient training/insufficient braking decelration makes collision guaranteed when moving, thereby receiving greater penatly than a static episode.
+Model prioritises remaining still over moving although it actively recieves penalty as insufficient training/insufficient braking decelration makes collision guaranteed when moving, thereby receiving greater penatly than a static episode. 
+
+
 Potential Fixes: 
 - Increase turn rate, reduce acceleration.
 - Reduce penalty for crashing and implement a shifted inverse speed-reward relationship that would provide higher penalty for remaining still.
