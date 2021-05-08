@@ -18,7 +18,7 @@ class Track:
     
     wireFrame = True
     angles = [0, np.pi/4, np.pi/2, 0.75 * np.pi, np.pi, -0.75 * np.pi, - 0.5 * np.pi, -0.25 * np.pi]
-    max_sight = 100
+    max_sight = 1
     pos_actions = [[1, 0, 0, 0], [0, 0, 1, 0], [1, 1, 0, 0], [1, 0, 0, 1], [0, 1, 1, 0], [0, 0, 1, 1], [0, 1, 0, 0], [0, 0, 0, 1]]
 
 

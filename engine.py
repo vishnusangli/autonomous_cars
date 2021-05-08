@@ -51,7 +51,7 @@ class Master_Handler:
                 #print(reward, pair[0].dist_travelled)
                 #print(state)
                 #print(val, self.agents[0][0].centre)
-                self.agents_alive[num] = not done
+                #self.agents_alive[num] = not done
                 
     def master_update(self, dt):
 
