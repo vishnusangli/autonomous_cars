@@ -24,7 +24,7 @@ A rectangular car sprite controlled by WASD input.
   - 8 lines of sight equally distributed from [0 - 2pi], given as a fraction of max line of sight
   - Instantaneous speed scaled between [min_speed, max_speed] as [0, 1]
 
-Current final trial7 NN model: 
+## Current trial7 DQN model 
 - Dense(9) input layer
 - Flatten layer 
 - Dense layer with linear activation
