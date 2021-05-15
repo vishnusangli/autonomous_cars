@@ -46,7 +46,7 @@ MODEL_NAME = '1x9'
 MEMORY_FRACTION = 0.20
 PREDICTION_BATCH_SIZE = 1
 TRAINING_BATCH_SIZE = MINIBATCH_SIZE // 4
-TRIAL_NUM = "trial7"
+TRIAL_NUM = "trial8"
 # Environment settings
 EPISODES = 300
 
@@ -270,7 +270,7 @@ if __name__ == '__main__':
     # Create agent and environment
     
     agent = DQNAgent()
-    env = Master_Handler(filename = 'tracks/second.txt', dt = DT)
+    env = Master_Handler(filename = 'tracks/third.txt', dt = DT)
 
 
     tf.compat.v1.global_variables_initializer()
@@ -294,7 +294,7 @@ if __name__ == '__main__':
     for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
         #if episode == EPISODES:
             #write = True
-
+        writer = CarWriter()
         #print(f"Episode: {episode}")
         try:
 

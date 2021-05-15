@@ -18,7 +18,7 @@ class Track:
     
     wireFrame = True
     angles = [0, np.pi/4, np.pi/2, 0.75 * np.pi, np.pi, -0.75 * np.pi, - 0.5 * np.pi, -0.25 * np.pi]
-    max_sight = 100
+    max_sight = 80
     pos_actions = [[1, 0, 0, 0], [0, 0, 1, 0], [1, 1, 0, 0], [1, 0, 0, 1], [0, 1, 1, 0], [0, 0, 1, 1], [0, 1, 0, 0], [0, 0, 0, 1]]
 
 
@@ -132,7 +132,15 @@ class Track:
         
         val = np.divide(agent.speed - (agent.speed_range[1]/2), agent.speed_range[1]) * np.divide(dt, 20)  * 400
         return val
+
+    def new_reward(self, agent, dt, collide):
+        if collide:
+            return -200
+        if agent.speed == 0:
+            return -40
         
+        val = np.multiply(np.power(2.3, np.divide(abs(agent.speed), 10)), dt/10)
+        return val
     def convert_DQNaction(self, control):
         '''
         DQN Action will be permutations of two separate groups (up, down, nothing) (left, right, nothing)

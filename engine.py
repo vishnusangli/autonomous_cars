@@ -46,12 +46,12 @@ class Master_Handler:
                 con = pair[1]()
                 #print(con, self.trials_left)
                 pair[0].register_control(con, self.dt)
-                state, reward, done = self.track.give_stuff(pair[0], self.dt)
-                print(state)
+                #state, reward, done = self.track.give_stuff(pair[0], self.dt)
+                #print(state)
                 #print(reward, pair[0].dist_travelled)
                 #print(state)
                 #print(val, self.agents[0][0].centre)
-                self.agents_alive[num] = not done
+                #self.agents_alive[num] = not done
                 
     def master_update(self, dt):
 

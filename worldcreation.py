@@ -203,5 +203,5 @@ finally:
     x = input("Write?")
     if x == "y":
         w = TrackWriter(save_elems)
-        w.write('tracks/second.txt', 960, 540)
+        w.write('tracks/third.txt', 960, 540)
     print("Final error list: ", err_list)
