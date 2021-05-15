@@ -18,9 +18,7 @@ import time
 import random
 #from tensorflow.python.keras.layers.convolutional import Conv1D
 from tqdm import tqdm
-import os
 from threading import Thread
-import sys
 import traceback
 
 
