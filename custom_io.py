@@ -151,12 +151,13 @@ def write_stats(vals, suggest):
        f.write("\n")
     f.close() 
 
-def read_stats(suggest):
+def read_stats(suggest, skip = False, delimit = " "):
     f = open(suggest, 'r')
+    if skip:
+        print(f.readline())
     main = []
     for line in f:
-        line = line.strip().split()
-
+        line = line.strip().split(delimit)
         newline = [float(a) for a in line]
         main.append(newline)
     return np.matrix(main)
